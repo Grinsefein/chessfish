@@ -42,14 +42,17 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ErrorBoundary, ChessboardErrorBoundary, AnalysisErrorBoundary } from "@/components/ErrorBoundary";
 import { BoardEditor } from "@/components/BoardEditor";
 import { OAuthConnections } from "@/components/OAuthConnections";
+import { OpeningExplorer } from "@/components/OpeningExplorer";
+import { GameReview } from "@/components/GameReview";
 
 import { Chess, type Square } from 'chess.js';
 import { summarizeGame } from "@/services/geminiService";
-import { getOpeningFromFEN, getOpeningMoves } from "@/services/openings";
+import { getOpeningFromFEN, getOpeningExplorerData, type OpeningExplorerData } from "@/services/openings";
 import { NNUEFile, NNUE_FILES } from "@/services/nnueService";
+import { BOT_PERSONALITIES, getBotPersonality, personalityToBot, type BotPersonality } from "@/services/botCharacters";
 
 const socket = io();
 
@@ -92,6 +95,7 @@ export default function ChessApp() {
   const [mode, setMode] = useState<'play' | 'analysis' | 'editor'>('play');
   const [engineMode, setEngineMode] = useState<'local' | 'cloud'>('local');
   const [cloudResult, setCloudResult] = useState<any>(null);
+  const [selectedBotPersonality, setSelectedBotPersonality] = useState<BotPersonality>(BOT_PERSONALITIES[0]);
   const [selectedBot, setSelectedBot] = useState(BOTS[0]);
   const [botList, setBotList] = useState(BOTS);
   const [evalHistory, setEvalHistory] = useState<{ move: number; eval: number; notation: string }[]>([]);
@@ -103,6 +107,8 @@ export default function ChessApp() {
   const [openingInfo, setOpeningInfo] = useState<any>(null);
   const [reviewData, setReviewData] = useState<any>(null);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [showGameReview, setShowGameReview] = useState(false);
+  const [showOpeningExplorer, setShowOpeningExplorer] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [showThreats, setShowThreats] = useState(false);
   const [showMoveStrength, setShowMoveStrength] = useState(false);
@@ -805,12 +811,12 @@ export default function ChessApp() {
 
             {/* The Board */}
             <div className="w-full aspect-square relative rounded-xl overflow-hidden border-[6px] border-[#222] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]">
-                <ErrorBoundary fallback={<div className="p-12 text-center bg-card rounded-2xl border border-white/5">Board Failed to Load</div>}>
+                <ChessboardErrorBoundary>
                   {/* @ts-ignore - This custom Chessboard build expects options prop */}
                   <Chessboard 
                     options={boardOptions}
                   />
-                </ErrorBoundary>
+                </ChessboardErrorBoundary>
               <AnimatePresence>
                 {isGameOver && (
                   <motion.div 
@@ -1171,6 +1177,34 @@ export default function ChessApp() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Opening Explorer - only show in analysis mode */}
+            {mode === 'analysis' && (
+              <ErrorBoundary componentName="Opening Explorer">
+                <OpeningExplorer 
+                  fen={fen}
+                  onMoveSelect={(move) => {
+                    // Navigate to that move in the game
+                    console.log('Selected opening move:', move);
+                  }}
+                />
+              </ErrorBoundary>
+            )}
+
+            {/* Game Review - show when game is complete or in analysis mode */}
+            {(mode === 'analysis' || isGameOver) && (
+              <ErrorBoundary componentName="Game Review">
+                <GameReview
+                  pgn={exportPgn()}
+                  onMoveClick={(moveIndex) => {
+                    // Navigate to specific move
+                    console.log('Navigate to move:', moveIndex);
+                  }}
+                  onClose={() => setShowGameReview(false)}
+                  evaluateFen={evaluateFen}
+                />
+              </ErrorBoundary>
             )}
 
             <OAuthConnections />

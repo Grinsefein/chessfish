@@ -5,9 +5,26 @@ export interface Opening {
   popularity: number;
 }
 
+export interface OpeningMove {
+  san: string;
+  uci: string;
+  averageRating: number;
+  white: number;
+  draws: number;
+  black: number;
+  gameCount: number;
+}
+
+export interface OpeningExplorerData {
+  opening?: Opening;
+  moves: OpeningMove[];
+  topGames: any[];
+}
+
 export async function getOpeningFromFEN(fen: string): Promise<Opening | null> {
   try {
-    const response = await fetch(`https://explorer.lichess.ov/lichess?fen=${encodeURIComponent(fen)}`);
+    const response = await fetch(`https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(fen)}`);
+    if (!response.ok) return null;
     const data = await response.json();
     
     if (data.opening && data.opening.name) {
@@ -26,16 +43,44 @@ export async function getOpeningFromFEN(fen: string): Promise<Opening | null> {
   }
 }
 
-export async function getOpeningMoves(fen: string): Promise<any[]> {
+export async function getOpeningExplorerData(fen: string): Promise<OpeningExplorerData | null> {
   try {
-    const response = await fetch(`https://explorer.lichess.ov/lichess?fen=${encodeURIComponent(fen)}&topGames=0&recentGames=0`);
+    const response = await fetch(`https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(fen)}&topGames=0&recentGames=0`);
+    if (!response.ok) return null;
     const data = await response.json();
     
-    return data.moves || [];
+    return {
+      opening: data.opening,
+      moves: data.moves || [],
+      topGames: data.topGames || []
+    };
   } catch (error) {
-    console.error('Failed to fetch opening moves:', error);
-    return [];
+    console.error('Failed to fetch opening explorer data:', error);
+    return null;
   }
+}
+
+export async function getMastersExplorerData(fen: string): Promise<OpeningExplorerData | null> {
+  try {
+    const response = await fetch(`https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(fen)}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    
+    return {
+      opening: data.opening,
+      moves: data.moves || [],
+      topGames: data.topGames || []
+    };
+  } catch (error) {
+    console.error('Failed to fetch masters explorer data:', error);
+    return null;
+  }
+}
+
+// Legacy function for backward compatibility
+export async function getOpeningMoves(fen: string): Promise<any[]> {
+  const data = await getOpeningExplorerData(fen);
+  return data?.moves || [];
 }
 
 export const POPULAR_OPENINGS: Opening[] = [

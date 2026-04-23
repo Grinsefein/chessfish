@@ -81,11 +81,14 @@ class StockfishEngine {
 
   private currentAnalysis: any = null;
 
+  private currentMultiPvLines: Map<number, any> = new Map();
+
   private parseInfoLine(line: string) {
     const parts = line.split(' ');
     let score = 0;
     let depth = 0;
     let pv = '';
+    let multipv = 1;
 
     for (let i = 0; i < parts.length; i++) {
       if (parts[i] === 'score') {
@@ -98,17 +101,37 @@ class StockfishEngine {
       if (parts[i] === 'depth') {
         depth = parseInt(parts[i + 1]);
       }
+      if (parts[i] === 'multipv') {
+        multipv = parseInt(parts[i + 1]);
+      }
       if (parts[i] === 'pv') {
         pv = parts.slice(i + 1).join(' ');
       }
     }
 
-    this.currentAnalysis = {
-      evaluation: score,
-      depth,
-      bestMove: pv.split(' ')[0] || '',
-      lines: [{ evaluation: score, depth, pv }]
-    };
+    // Store this line in the Multi-PV map
+    if (pv) {
+      this.currentMultiPvLines.set(multipv, {
+        evaluation: score,
+        depth,
+        bestMove: pv.split(' ')[0] || '',
+        pv
+      });
+
+      // Build the analysis object with all lines
+      const lines: any[] = [];
+      const sortedKeys = Array.from(this.currentMultiPvLines.keys()).sort((a, b) => a - b);
+      for (const key of sortedKeys) {
+        lines.push(this.currentMultiPvLines.get(key));
+      }
+
+      this.currentAnalysis = {
+        evaluation: lines[0]?.evaluation || 0,
+        bestMove: lines[0]?.bestMove || '',
+        depth,
+        lines
+      };
+    }
   }
 
   private notifyCallbacks(bestMove: string) {
@@ -122,12 +145,16 @@ class StockfishEngine {
     this.currentAnalysis = null;
   }
 
-  async analyze(fen: string, depth: number = 15, time: number = 5000): Promise<any> {
+  async analyze(fen: string, depth: number = 15, time: number = 5000, multiPv: number = 3): Promise<any> {
     return new Promise((resolve) => {
       if (!this.isReady) {
         resolve({ error: 'Engine not ready' });
         return;
       }
+
+      // Clear previous Multi-PV lines and set new MultiPV option
+      this.currentMultiPvLines.clear();
+      this.sendCommand(`setoption name MultiPV value ${multiPv}`);
 
       const callbackId = Date.now().toString();
       this.analysisCallbacks.set(callbackId, resolve);
@@ -158,20 +185,21 @@ async function startServer() {
     },
   });
 
-  const PORT = 3000;
+  const PORT = 4000;
 
   // Socket.io for Real-time moves/Cloud Engine
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
     socket.on("engine:analyze", async (payload) => {
-      console.log("Engine analysis requested for fen:", payload.fen);
+      console.log("Engine analysis requested for fen:", payload.fen, "multiPv:", payload.multiPv);
       
       try {
         const result = await stockfishEngine.analyze(
           payload.fen,
           payload.depth || 15,
-          payload.time || 5000
+          payload.time || 5000,
+          payload.multiPv || 3
         );
         socket.emit("engine:result", {
           fen: payload.fen,
