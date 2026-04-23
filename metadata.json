@@ -1,0 +1,6 @@
+{
+  "name": "Stockfish Chess",
+  "description": "A polished chess application with hybrid Cloud/Local Stockfish engine, analysis tools, and bot characters.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
