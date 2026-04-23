@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { 
   getOpeningExplorerData, 
   getMastersExplorerData, 
+  getMockOpeningMoves,
   type OpeningExplorerData,
   type OpeningMove 
 } from '@/services/openings';
@@ -27,9 +28,21 @@ export function OpeningExplorer({ fen, onMoveSelect }: OpeningExplorerProps) {
       if (!fen) return;
       setLoading(true);
       
-      const explorerData = database === 'lichess' 
+      let explorerData = database === 'lichess' 
         ? await getOpeningExplorerData(fen)
         : await getMastersExplorerData(fen);
+      
+      // If API fails, use mock data for common positions
+      if (!explorerData || explorerData.moves.length === 0) {
+        const mockMoves = getMockOpeningMoves(fen);
+        if (mockMoves.length > 0) {
+          explorerData = {
+            opening: undefined,
+            moves: mockMoves,
+            topGames: []
+          };
+        }
+      }
       
       setData(explorerData);
       setLoading(false);
