@@ -65,7 +65,10 @@ export default function ChessApp() {
     exportPgn,
     exportAnnotatedPgn,
     undoMove,
-    resetGame
+    resetGame,
+    makeMove,
+    history,
+    lastMove
   } = useChessGame();
 
   const { isReady: engineReady, error: engineError, analyze: analyzeLocal, result: localResult, setOptions: setLocalOptions, evaluateFen, reboot: rebootLocal } = useStockfish();
