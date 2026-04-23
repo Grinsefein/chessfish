@@ -4,9 +4,149 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import http from "http";
+import { spawn, ChildProcess } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Stockfish Engine Manager
+class StockfishEngine {
+  private engine: ChildProcess | null = null;
+  private isReady: boolean = false;
+  private analysisCallbacks: Map<string, (result: any) => void> = new Map();
+
+  constructor() {
+    this.startEngine();
+  }
+
+  private startEngine() {
+    try {
+      this.engine = spawn('/usr/local/bin/stockfish');
+      
+      this.engine.stdout?.on('data', (data) => {
+        const output = data.toString();
+        this.parseEngineOutput(output);
+      });
+
+      this.engine.stderr?.on('data', (data) => {
+        console.error('Stockfish error:', data.toString());
+      });
+
+      this.engine.on('close', (code) => {
+        console.log(`Stockfish process exited with code ${code}`);
+        this.isReady = false;
+        // Restart after delay
+        setTimeout(() => this.startEngine(), 1000);
+      });
+
+      // Initialize UCI
+      this.sendCommand('uci');
+    } catch (error) {
+      console.error('Failed to start Stockfish:', error);
+    }
+  }
+
+  private sendCommand(command: string) {
+    if (this.engine?.stdin) {
+      this.engine.stdin.write(command + '\n');
+    }
+  }
+
+  private parseEngineOutput(output: string) {
+    const lines = output.split('\n');
+    
+    for (const line of lines) {
+      if (line.startsWith('uciok')) {
+        this.isReady = true;
+        this.sendCommand('setoption name MultiPV value 3');
+      }
+      
+      if (line.startsWith('readyok')) {
+        this.isReady = true;
+      }
+
+      // Parse analysis info
+      if (line.startsWith('info') && line.includes('score')) {
+        this.parseInfoLine(line);
+      }
+
+      // Parse bestmove
+      if (line.startsWith('bestmove')) {
+        const parts = line.split(' ');
+        const bestMove = parts[1];
+        this.notifyCallbacks(bestMove);
+      }
+    }
+  }
+
+  private currentAnalysis: any = null;
+
+  private parseInfoLine(line: string) {
+    const parts = line.split(' ');
+    let score = 0;
+    let depth = 0;
+    let pv = '';
+
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i] === 'score') {
+        if (parts[i + 1] === 'cp') {
+          score = parseFloat(parts[i + 2]) / 100;
+        } else if (parts[i + 1] === 'mate') {
+          score = parseFloat(parts[i + 2]) > 0 ? 100 : -100;
+        }
+      }
+      if (parts[i] === 'depth') {
+        depth = parseInt(parts[i + 1]);
+      }
+      if (parts[i] === 'pv') {
+        pv = parts.slice(i + 1).join(' ');
+      }
+    }
+
+    this.currentAnalysis = {
+      evaluation: score,
+      depth,
+      bestMove: pv.split(' ')[0] || '',
+      lines: [{ evaluation: score, depth, pv }]
+    };
+  }
+
+  private notifyCallbacks(bestMove: string) {
+    if (this.currentAnalysis) {
+      this.currentAnalysis.bestMove = bestMove;
+      this.analysisCallbacks.forEach((callback) => {
+        callback(this.currentAnalysis);
+      });
+      this.analysisCallbacks.clear();
+    }
+    this.currentAnalysis = null;
+  }
+
+  async analyze(fen: string, depth: number = 15, time: number = 5000): Promise<any> {
+    return new Promise((resolve) => {
+      if (!this.isReady) {
+        resolve({ error: 'Engine not ready' });
+        return;
+      }
+
+      const callbackId = Date.now().toString();
+      this.analysisCallbacks.set(callbackId, resolve);
+
+      this.sendCommand(`position fen ${fen}`);
+      this.sendCommand(`go depth ${depth}`);
+
+      // Timeout fallback
+      setTimeout(() => {
+        if (this.analysisCallbacks.has(callbackId)) {
+          this.analysisCallbacks.delete(callbackId);
+          resolve({ error: 'Analysis timeout' });
+        }
+      }, time);
+    });
+  }
+}
+
+const stockfishEngine = new StockfishEngine();
 
 async function startServer() {
   const app = express();
@@ -24,18 +164,29 @@ async function startServer() {
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    socket.on("engine:analyze", (payload) => {
-      // Phase 5: Cloud Engine Logic could go here
-      // For now, just mock a response or broadcast
+    socket.on("engine:analyze", async (payload) => {
       console.log("Engine analysis requested for fen:", payload.fen);
-      // Simulated delay
-      setTimeout(() => {
+      
+      try {
+        const result = await stockfishEngine.analyze(
+          payload.fen,
+          payload.depth || 15,
+          payload.time || 5000
+        );
         socket.emit("engine:result", {
           fen: payload.fen,
-          evaluation: (Math.random() * 2 - 1).toFixed(2),
-          bestMove: "e2e4",
+          evaluation: result.evaluation || 0,
+          bestMove: result.bestMove || '',
+          lines: result.lines || [],
+          error: result.error
         });
-      }, 500);
+      } catch (error) {
+        console.error("Analysis error:", error);
+        socket.emit("engine:result", {
+          fen: payload.fen,
+          error: 'Analysis failed'
+        });
+      }
     });
 
     socket.on("disconnect", () => {

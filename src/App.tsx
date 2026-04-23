@@ -85,8 +85,20 @@ export default function ChessApp() {
   const [openingInfo, setOpeningInfo] = useState<any>(null);
   const [reviewData, setReviewData] = useState<any>(null);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  
+  // Timer state (5 minutes per side)
+  const [playerTime, setPlayerTime] = useState(300); // 5 minutes in seconds
+  const [botTime, setBotTime] = useState(300);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Format seconds to MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleExportPGN = () => {
     const pgn = exportPgn();
@@ -210,6 +222,7 @@ export default function ChessApp() {
       if (engineMode === 'local') {
         analyzeLocal(fen, depthLimit);
       } else {
+        console.log("Emitting cloud analysis request for fen:", fen);
         socket.emit("engine:analyze", { 
           fen, 
           depth: cloudDepth, 
@@ -345,9 +358,40 @@ export default function ChessApp() {
     return pieces;
   }, []);
 
+  // Calculate possible moves for highlighting
+  const possibleMoves = useMemo(() => {
+    if (!selectedSquare) return [];
+    const gameCopy = new Chess(fen);
+    const moves = gameCopy.moves({ square: selectedSquare, verbose: true });
+    return moves.map(move => move.to);
+  }, [selectedSquare, fen]);
+
+  // Custom square styles for move highlighting
+  const customSquareStyles = useMemo(() => {
+    const styles: { [square: string]: React.CSSProperties } = {};
+    
+    // Highlight selected square
+    if (selectedSquare) {
+      styles[selectedSquare] = {
+        backgroundColor: 'rgba(255, 255, 0, 0.5)',
+      };
+    }
+    
+    // Highlight possible move squares
+    possibleMoves.forEach(square => {
+      styles[square] = {
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.3) 25%, transparent 25%)',
+        backgroundSize: '10px 10px',
+      };
+    });
+    
+    return styles;
+  }, [selectedSquare, possibleMoves]);
+
   const boardOptions = useMemo(() => ({
     position: fen,
-    onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) => {
+    onPieceDrop: (sourceSquare: string, targetSquare: string) => {
       if (isGameOver) return false;
       if (mode === 'play' && turn === 'b') return false;
       if (sourceSquare === targetSquare) return false;
@@ -358,15 +402,49 @@ export default function ChessApp() {
       });
 
       if (move === null) return false;
+      setSelectedSquare(null);
       return true;
+    },
+    onSquareClick: (square: string) => {
+      if (isGameOver) return;
+      if (mode === 'play' && turn === 'b') return;
+      
+      // If clicking the same square, deselect
+      if (selectedSquare === square) {
+        setSelectedSquare(null);
+        return;
+      }
+      
+      // If a piece is selected and clicking a valid move square, make the move
+      if (selectedSquare && possibleMoves.includes(square)) {
+        const move = makeMove({
+          from: selectedSquare,
+          to: square,
+          promotion: 'q',
+        });
+        if (move) {
+          setSelectedSquare(null);
+        }
+        return;
+      }
+      
+      // Select the square if it has a piece of the current turn
+      const gameCopy = new Chess(fen);
+      const piece = gameCopy.get(square);
+      if (piece && piece.color === turn) {
+        setSelectedSquare(square);
+      } else {
+        setSelectedSquare(null);
+      }
     },
     boardOrientation: "white" as const,
     allowDragging: !isGameOver && (mode === 'analysis' || turn === 'w'),
     darkSquareStyle: { backgroundColor: '#769656' },
     lightSquareStyle: { backgroundColor: '#eeeed2' },
     animationDurationInMs: 200,
-    pieces: customPieces
-  }), [fen, isGameOver, mode, turn, makeMove, customPieces]);
+    pieces: customPieces,
+    customSquareStyles
+  }), [fen, isGameOver, mode, turn, makeMove, customPieces, selectedSquare, possibleMoves]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30">
@@ -543,11 +621,13 @@ export default function ChessApp() {
                       {selectedBot.name}
                       <span className="text-[10px] text-muted-foreground font-medium opacity-60">({selectedBot.elo})</span>
                     </div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold opacity-40">Strength: {selectedBot.skillLevel}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold opacity-40">
+                      {'★'.repeat(Math.ceil(selectedBot.skillLevel / 4)) || '☆'}
+                    </div>
                   </div>
                 </div>
               <div className="font-mono text-xl font-medium px-4 py-1.5 rounded-lg bg-card border border-white/5 shadow-inner">
-                05:42
+                {formatTime(botTime)}
               </div>
             </div>
 
@@ -593,14 +673,14 @@ export default function ChessApp() {
             {/* Player Bottom */}
             <div className="w-full flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center font-bold border border-white/10">JS</div>
+                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center font-bold border border-primary/30 text-primary">You</div>
                 <div>
-                  <div className="text-sm font-bold">John Stock</div>
-                  <div className="text-[10px] text-muted-foreground tracking-widest font-bold opacity-40">UNITED STATES</div>
+                  <div className="text-sm font-bold">Player</div>
+                  <div className="text-[10px] text-muted-foreground tracking-widest font-bold opacity-40">WHITE</div>
                 </div>
               </div>
               <div className="font-mono text-xl font-medium px-4 py-1.5 rounded-lg bg-white text-black shadow-lg">
-                09:15
+                {formatTime(playerTime)}
               </div>
             </div>
           </div>
@@ -891,7 +971,10 @@ export default function ChessApp() {
                 </div>
               </ScrollArea>
               <div className="p-4 border-t border-white/5 grid grid-cols-2 gap-3">
-                <Button variant="secondary" onClick={() => undoMove()} className="bg-white/5 border-none hover:bg-white/10 font-bold text-xs">DRAW</Button>
+                <Button variant="secondary" onClick={() => undoMove()} className="bg-white/5 border-none hover:bg-white/10 font-bold text-xs flex items-center gap-2">
+                  <RotateCcw size={14} />
+                  UNDO
+                </Button>
                 <Button variant="destructive" onClick={resetGame} className="bg-red-500/80 hover:bg-red-500 font-bold text-xs uppercase transition-all shadow-lg shadow-red-500/20">RESIGN</Button>
               </div>
             </Card>
