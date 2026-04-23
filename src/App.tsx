@@ -28,7 +28,8 @@ import {
   Monitor,
   Download,
   Upload,
-  GripVertical
+  GripVertical,
+  Edit3
 } from "lucide-react";
 import { io } from "socket.io-client";
 import {
@@ -42,9 +43,11 @@ import {
 } from "recharts";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { BoardEditor } from "@/components/BoardEditor";
 
-import { Chess } from "chess.js";
+import { Chess, type Square } from 'chess.js';
 import { summarizeGame } from "@/services/geminiService";
+import { getOpeningFromFEN, getOpeningMoves } from "@/services/openings";
 
 const socket = io();
 
@@ -56,22 +59,19 @@ export default function ChessApp() {
     fen, 
     turn, 
     isGameOver, 
-    isCheck, 
-    history, 
-    makeMove, 
-    resetGame, 
-    undoMove,
-    lastMove,
-    isCheckmate,
+    isCheckmate, 
     isDraw,
     loadPgn,
-    exportPgn
+    exportPgn,
+    exportAnnotatedPgn,
+    undoMove,
+    resetGame
   } = useChessGame();
 
   const { isReady: engineReady, error: engineError, analyze: analyzeLocal, result: localResult, setOptions: setLocalOptions, evaluateFen, reboot: rebootLocal } = useStockfish();
   const { stats, recordGameResult, getDifficultyAdjustment } = usePerformanceScaling();
   
-  const [mode, setMode] = useState<'play' | 'analysis'>('play');
+  const [mode, setMode] = useState<'play' | 'analysis' | 'editor'>('play');
   const [engineMode, setEngineMode] = useState<'local' | 'cloud'>('local');
   const [cloudResult, setCloudResult] = useState<any>(null);
   const [selectedBot, setSelectedBot] = useState(BOTS[0]);
@@ -85,7 +85,12 @@ export default function ChessApp() {
   const [openingInfo, setOpeningInfo] = useState<any>(null);
   const [reviewData, setReviewData] = useState<any>(null);
   const [isReviewing, setIsReviewing] = useState(false);
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [showThreats, setShowThreats] = useState(false);
+  const [showMoveStrength, setShowMoveStrength] = useState(false);
+  const [moveEvaluations, setMoveEvaluations] = useState<{ [key: string]: number }>({});
+  const [engineHash, setEngineHash] = useState(128);
+  const [engineThreads, setEngineThreads] = useState(4);
   
   // Timer state (5 minutes per side)
   const [playerTime, setPlayerTime] = useState(300); // 5 minutes in seconds
@@ -211,10 +216,12 @@ export default function ChessApp() {
       
       setLocalOptions({ 
         'MultiPV': multiPVCount,
-        'Skill Level': targetSkillLevel
+        'Skill Level': targetSkillLevel,
+        'Hash': engineHash,
+        'Threads': engineThreads
       });
     }
-  }, [multiPVCount, engineMode, setLocalOptions, selectedBot, getDifficultyAdjustment]);
+  }, [multiPVCount, engineMode, setLocalOptions, selectedBot, getDifficultyAdjustment, engineHash, engineThreads]);
 
   // Engine analysis
   useEffect(() => {
@@ -232,6 +239,43 @@ export default function ChessApp() {
       }
     }
   }, [fen, mode, turn, analyzeLocal, engineMode, depthLimit, cloudDepth, cloudTime, multiPVCount]);
+
+  // Evaluate all possible moves for move strength indicator
+  useEffect(() => {
+    if (!showMoveStrength || mode !== 'play' || isGameOver) return;
+    
+    const evaluateMoves = async () => {
+      const gameCopy = new Chess(fen);
+      const moves = gameCopy.moves({ verbose: true });
+      const evaluations: { [key: string]: number } = {};
+      
+      for (const move of moves) {
+        gameCopy.move(move);
+        const score = await evaluateFen(gameCopy.fen(), 10);
+        evaluations[move.san] = score;
+        gameCopy.undo();
+      }
+      
+      setMoveEvaluations(evaluations);
+    };
+    
+    evaluateMoves();
+  }, [fen, showMoveStrength, mode, isGameOver, evaluateFen]);
+
+  // Fetch opening information
+  useEffect(() => {
+    const fetchOpening = async () => {
+      if (history.length < 2) {
+        setOpeningInfo(null);
+        return;
+      }
+      
+      const opening = await getOpeningFromFEN(fen);
+      setOpeningInfo(opening);
+    };
+    
+    fetchOpening();
+  }, [fen, history]);
 
   // Bot logic with dynamic thinking time
   useEffect(() => {
@@ -261,13 +305,18 @@ export default function ChessApp() {
     try {
       const plys = game.history({ verbose: true });
       const analysis: number[] = [];
+      const bestMoves: number[] = [];
       
-      // Analyze current plys
+      // Analyze current plys and best moves
       const tempGame = new Chess();
       for (const move of plys) {
+        // Get evaluation before move
+        const beforeEval = await evaluateFen(tempGame.fen(), 10);
+        
         tempGame.move(move);
         const score = await evaluateFen(tempGame.fen(), 10);
         analysis.push(score);
+        bestMoves.push(beforeEval);
       }
       
       // Identify blunders (diff > 2.0)
@@ -275,6 +324,8 @@ export default function ChessApp() {
       let mistakes = 0;
       let brilliant = 0;
       let prevEval = 0;
+      let totalCPL = 0;
+      let cplCount = 0;
       
       analysis.forEach((score, i) => {
         const diff = score - prevEval;
@@ -287,16 +338,23 @@ export default function ChessApp() {
         else if (normalizedDiff < -1.2) mistakes++;
         else if (normalizedDiff > 1.5 && Math.abs(prevEval) < 0.5) brilliant++; // Simple proxy for brilliant
         
+        // Calculate CPL (Centipawn Loss)
+        const cpl = Math.abs((bestMoves[i] - score) * 100);
+        totalCPL += cpl;
+        cplCount++;
+        
         prevEval = score;
       });
 
       const accuracy = Math.max(0, 100 - (blunders * 12) - (mistakes * 6));
+      const avgCPL = cplCount > 0 ? Math.round(totalCPL / cplCount) : 0;
       
       const review = {
         accuracy: Math.round(accuracy),
         blunders,
         mistakes,
         brilliant,
+        avgCPL,
         summary: "Generating insights..."
       };
       
@@ -310,6 +368,21 @@ export default function ChessApp() {
       setIsReviewing(false);
     }
   }, [history, game, evaluateFen]);
+
+  // Chess timer countdown
+  useEffect(() => {
+    if (isGameOver || mode !== 'play') return;
+    
+    const interval = setInterval(() => {
+      if (turn === 'w') {
+        setPlayerTime(prev => Math.max(0, prev - 1));
+      } else {
+        setBotTime(prev => Math.max(0, prev - 1));
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [turn, isGameOver, mode]);
 
   // Record game results for scaling
   useEffect(() => {
@@ -362,9 +435,43 @@ export default function ChessApp() {
   const possibleMoves = useMemo(() => {
     if (!selectedSquare) return [];
     const gameCopy = new Chess(fen);
-    const moves = gameCopy.moves({ square: selectedSquare, verbose: true });
-    return moves.map(move => move.to);
+    const moves = gameCopy.moves({ square: selectedSquare as Square, verbose: true });
+    return moves.map((move: any) => move.to as Square);
   }, [selectedSquare, fen]);
+
+  // Calculate threats (squares under attack)
+  const threats = useMemo(() => {
+    if (!showThreats) return [];
+    const gameCopy = new Chess(fen);
+    const threatenedSquares: string[] = [];
+    
+    // Get all squares for the opponent
+    const opponentColor = turn === 'w' ? 'b' : 'w';
+    const allSquares: string[] = [];
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const file = String.fromCharCode(97 + col);
+        const rank = 8 - row;
+        const square = file + rank;
+        const piece = gameCopy.get(square as Square);
+        if (piece && piece.color === opponentColor) {
+          allSquares.push(square);
+        }
+      }
+    }
+    
+    // Calculate all possible moves for opponent pieces
+    allSquares.forEach(square => {
+      const moves = gameCopy.moves({ square: square as Square, verbose: true });
+      moves.forEach((move: any) => {
+        if (!threatenedSquares.includes(move.to)) {
+          threatenedSquares.push(move.to);
+        }
+      });
+    });
+    
+    return threatenedSquares;
+  }, [showThreats, fen, turn]);
 
   // Custom square styles for move highlighting
   const customSquareStyles = useMemo(() => {
@@ -377,21 +484,44 @@ export default function ChessApp() {
       };
     }
     
-    // Highlight possible move squares
+    // Highlight possible move squares with move strength
     possibleMoves.forEach(square => {
+      const gameCopy = new Chess(fen);
+      const move = gameCopy.moves({ square: selectedSquare as Square, verbose: true }).find((m: any) => m.to === square);
+      if (move && showMoveStrength && moveEvaluations[move.san] !== undefined) {
+        const eval_ = moveEvaluations[move.san];
+        const isGood = eval_ > 0;
+        const isBad = eval_ < -0.5;
+        
+        styles[square] = {
+          backgroundColor: isGood ? 'rgba(0, 255, 0, 0.3)' : isBad ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+          backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.3) 25%, transparent 25%)',
+          backgroundSize: '10px 10px',
+        };
+      } else {
+        styles[square] = {
+          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+          backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.3) 25%, transparent 25%)',
+          backgroundSize: '10px 10px',
+        };
+      }
+    });
+    
+    // Highlight threats
+    threats.forEach(square => {
       styles[square] = {
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.3) 25%, transparent 25%)',
-        backgroundSize: '10px 10px',
+        ...styles[square],
+        backgroundColor: 'rgba(255, 0, 0, 0.3)',
+        border: '2px solid rgba(255, 0, 0, 0.5)',
       };
     });
     
     return styles;
-  }, [selectedSquare, possibleMoves]);
+  }, [selectedSquare, possibleMoves, threats, showMoveStrength, moveEvaluations, fen]);
 
   const boardOptions = useMemo(() => ({
     position: fen,
-    onPieceDrop: (sourceSquare: string, targetSquare: string) => {
+    onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) => {
       if (isGameOver) return false;
       if (mode === 'play' && turn === 'b') return false;
       if (sourceSquare === targetSquare) return false;
@@ -405,18 +535,18 @@ export default function ChessApp() {
       setSelectedSquare(null);
       return true;
     },
-    onSquareClick: (square: string) => {
+    onSquareClick: ({ square }: { square: string }) => {
       if (isGameOver) return;
       if (mode === 'play' && turn === 'b') return;
       
       // If clicking the same square, deselect
-      if (selectedSquare === square) {
+      if (selectedSquare === (square as Square)) {
         setSelectedSquare(null);
         return;
       }
       
       // If a piece is selected and clicking a valid move square, make the move
-      if (selectedSquare && possibleMoves.includes(square)) {
+      if (selectedSquare && possibleMoves.includes(square as Square)) {
         const move = makeMove({
           from: selectedSquare,
           to: square,
@@ -430,9 +560,9 @@ export default function ChessApp() {
       
       // Select the square if it has a piece of the current turn
       const gameCopy = new Chess(fen);
-      const piece = gameCopy.get(square);
+      const piece = gameCopy.get(square as Square);
       if (piece && piece.color === turn) {
-        setSelectedSquare(square);
+        setSelectedSquare(square as Square);
       } else {
         setSelectedSquare(null);
       }
@@ -502,6 +632,12 @@ export default function ChessApp() {
           >
             <Activity size={20} />
           </button>
+          <button 
+            onClick={() => setMode('editor')}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${mode === 'editor' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-white/5'}`}
+          >
+            <Edit3 size={20} />
+          </button>
           <div className="w-10 h-10 rounded-xl hover:bg-white/5 text-muted-foreground flex items-center justify-center transition-colors">
             <Trophy size={20} />
           </div>
@@ -554,6 +690,11 @@ export default function ChessApp() {
           </div>
 
           {/* Board Container */}
+          {mode === 'editor' ? (
+            <div className="flex-1 flex flex-col items-center max-w-[600px] mx-auto">
+              <BoardEditor onFenChange={(newFen) => loadPgn(newFen)} />
+            </div>
+          ) : (
           <div className="flex-1 flex flex-col items-center max-w-[600px] mx-auto">
             {/* Player Top */}
             <div className="w-full flex items-center justify-between py-3">
@@ -595,6 +736,8 @@ export default function ChessApp() {
                                   setShowBotSelector(false);
                                   setDepthLimit(bot.skillLevel + 2);
                                   resetGame();
+                                  setPlayerTime(300);
+                                  setBotTime(300);
                                 }}
                                 className="flex-1 flex items-center gap-3 text-left min-w-0"
                               >
@@ -622,7 +765,7 @@ export default function ChessApp() {
                       <span className="text-[10px] text-muted-foreground font-medium opacity-60">({selectedBot.elo})</span>
                     </div>
                     <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold opacity-40">
-                      {'★'.repeat(Math.ceil(selectedBot.skillLevel / 4)) || '☆'}
+                      {selectedBot.skillLevel === 0 ? '☆ Beginner' : '★'.repeat(Math.ceil(selectedBot.skillLevel / 4))}
                     </div>
                   </div>
                 </div>
@@ -659,7 +802,7 @@ export default function ChessApp() {
                         {game.isCheckmate() ? 'Checkmate' : 'Stalemate / Draw'}
                       </p>
                       <Button 
-                        onClick={resetGame}
+                        onClick={() => { resetGame(); setPlayerTime(300); setBotTime(300); }}
                         className="w-full h-14 text-lg font-black rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 active:scale-95 transition-all"
                       >
                         NEW GAME
@@ -684,6 +827,7 @@ export default function ChessApp() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Right Sidebar */}
           <aside className="lg:w-[320px] flex flex-col gap-4">
@@ -695,6 +839,24 @@ export default function ChessApp() {
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary">Depth {depthLimit}</span>
                 </div>
                 <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50">Threats</span>
+                    <button
+                      onClick={() => setShowThreats(!showThreats)}
+                      className={`w-10 h-5 rounded-full transition-all ${showThreats ? 'bg-red-500' : 'bg-white/10'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full bg-white transition-all ${showThreats ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50">Move Strength</span>
+                    <button
+                      onClick={() => setShowMoveStrength(!showMoveStrength)}
+                      className={`w-10 h-5 rounded-full transition-all ${showMoveStrength ? 'bg-blue-500' : 'bg-white/10'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full bg-white transition-all ${showMoveStrength ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
                   <div className="flex flex-col items-end mr-4">
                     <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50 mb-1">Multi-PV</span>
                     <div className="flex gap-1">
@@ -722,6 +884,33 @@ export default function ChessApp() {
                   </div>
                 </div>
               </CardHeader>
+              {engineMode === 'local' && (
+                <div className="p-4 border-b border-white/5 flex gap-4">
+                  <div className="flex-1">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50 mb-1 block">Hash (MB)</span>
+                    <input 
+                      type="number" 
+                      min="32" 
+                      max="2048" 
+                      step="32"
+                      value={engineHash} 
+                      onChange={(e) => setEngineHash(Math.max(32, Math.min(2048, Number(e.target.value))))}
+                      className="bg-white/5 border border-white/10 rounded w-full h-6 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50 mb-1 block">Threads</span>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="16" 
+                      value={engineThreads} 
+                      onChange={(e) => setEngineThreads(Math.max(1, Math.min(16, Number(e.target.value))))}
+                      className="bg-white/5 border border-white/10 rounded w-full h-6 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
+                </div>
+              )}
               {engineMode === 'cloud' && (
                 <div className="px-5 py-2 bg-blue-500/5 border-b border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -848,7 +1037,7 @@ export default function ChessApp() {
                           <span className="text-[10px] font-black uppercase tracking-widest text-primary">Performance</span>
                           <span className="text-lg font-black text-primary">{reviewData.accuracy}%</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 mb-3">
+                        <div className="grid grid-cols-4 gap-2 mb-3">
                           <div className="text-center">
                             <div className="text-xs font-bold text-red-400">{reviewData.blunders}</div>
                             <div className="text-[8px] uppercase font-black opacity-40">Blunders</div>
@@ -861,7 +1050,23 @@ export default function ChessApp() {
                             <div className="text-xs font-bold text-blue-400">{reviewData.brilliant}</div>
                             <div className="text-[8px] uppercase font-black opacity-40">Brilliant</div>
                           </div>
+                          <div className="text-center">
+                            <div className="text-xs font-bold text-green-400">{reviewData.avgCPL}</div>
+                            <div className="text-[8px] uppercase font-black opacity-40">Avg CPL</div>
+                          </div>
                         </div>
+                        <Button
+                          onClick={() => {
+                            const annotated = exportAnnotatedPgn(moveEvaluations);
+                            navigator.clipboard.writeText(annotated);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="w-full mb-3"
+                        >
+                          <Download size={14} className="mr-2" />
+                          Export Annotated PGN
+                        </Button>
                         <p className="text-[10px] italic opacity-60 leading-tight">{reviewData.summary}</p>
                       </motion.div>
                     )}
@@ -870,59 +1075,25 @@ export default function ChessApp() {
               </CardContent>
             </Card>
 
-            {mode === 'analysis' && openingInfo && (
+            {openingInfo && (
               <Card className="bg-card border-white/5 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
-                <CardHeader className="p-4 border-b border-white/5 bg-white/5">
-                   <div className="flex flex-col">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Opening Explorer</span>
-                      <Badge variant="outline" className="text-[9px] h-4 py-0 bg-primary/5 text-primary border-primary/20">WGM/GM Data</Badge>
-                    </div>
-                    <span className="text-xs font-bold text-white mt-1 truncate max-w-[200px]">
-                      {openingInfo.opening?.name || 'Initial Position'}
-                    </span>
-                  </div>
+                <CardHeader className="p-4 border-b border-white/5">
+                  <CardTitle className="text-sm font-black uppercase tracking-widest">Opening</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                  <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                    {openingInfo.moves?.length > 0 ? (
-                      openingInfo.moves.map((m: any, i: number) => {
-                        const total = m.white + m.draws + m.black;
-                        const wP = (m.white / total) * 100;
-                        const dP = (m.draws / total) * 100;
-                        const bP = (m.black / total) * 100;
-
-                        return (
-                          <button 
-                            key={i} 
-                            onClick={() => makeMove(m.san)}
-                            className="w-full flex flex-col p-4 border-b border-white/5 hover:bg-white/5 transition-all text-left group"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-mono font-bold text-sm text-primary group-hover:scale-110 transition-transform origin-left">{m.san}</span>
-                              <span className="text-[10px] font-mono opacity-40">{total.toLocaleString()} games</span>
-                            </div>
-                            
-                            {/* Win Rate Bar */}
-                            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-white/5">
-                              <div className="h-full bg-white/80" style={{ width: `${wP}%` }} />
-                              <div className="h-full bg-muted-foreground/40" style={{ width: `${dP}%` }} />
-                              <div className="h-full bg-red-500/80" style={{ width: `${bP}%` }} />
-                            </div>
-                            
-                            <div className="flex justify-between mt-1 text-[9px] font-black tracking-tight uppercase opacity-60">
-                              <span>{Math.round(wP)}% W</span>
-                              <span>{Math.round(dP)}% D</span>
-                              <span>{Math.round(bP)}% B</span>
-                            </div>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="p-8 text-center opacity-30 italic text-xs">
-                        No more theory found in master database.
-                      </div>
-                    )}
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-muted-foreground">Name</span>
+                      <span className="text-xs font-bold text-primary">{openingInfo.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-muted-foreground">ECO</span>
+                      <span className="text-xs font-bold text-primary">{openingInfo.eco}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-muted-foreground">Moves</span>
+                      <span className="text-xs font-bold text-primary">{openingInfo.moves}</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -975,7 +1146,7 @@ export default function ChessApp() {
                   <RotateCcw size={14} />
                   UNDO
                 </Button>
-                <Button variant="destructive" onClick={resetGame} className="bg-red-500/80 hover:bg-red-500 font-bold text-xs uppercase transition-all shadow-lg shadow-red-500/20">RESIGN</Button>
+                <Button variant="destructive" onClick={() => { resetGame(); setPlayerTime(300); setBotTime(300); }} className="bg-red-500/80 hover:bg-red-500 font-bold text-xs uppercase transition-all shadow-lg shadow-red-500/20">RESIGN</Button>
               </div>
             </Card>
 

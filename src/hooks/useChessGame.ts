@@ -58,6 +58,52 @@ export function useChessGame() {
     return game.pgn();
   }, [game]);
 
+  const exportAnnotatedPgn = useCallback((evaluations: { [move: string]: number }, annotations: { [move: string]: string } = {}) => {
+    const pgn = game.pgn();
+    const moves = game.history({ verbose: true });
+    
+    let annotatedPgn = '';
+    let moveIndex = 0;
+    
+    moves.forEach((move, i) => {
+      const moveNumber = Math.floor(i / 2) + 1;
+      const isWhiteMove = i % 2 === 0;
+      
+      if (isWhiteMove) {
+        annotatedPgn += `${moveNumber}. `;
+      }
+      
+      annotatedPgn += move.san;
+      
+      // Add evaluation comment
+      if (evaluations[move.san] !== undefined) {
+        const eval_ = evaluations[move.san];
+        const evalStr = eval_ > 0 ? `+${eval_.toFixed(2)}` : eval_.toFixed(2);
+        annotatedPgn += ` {eval: ${evalStr}}`;
+      }
+      
+      // Add custom annotation
+      if (annotations[move.san]) {
+        annotatedPgn += ` {${annotations[move.san]}}`;
+      }
+      
+      if (!isWhiteMove) {
+        annotatedPgn += ' ';
+      } else if (i < moves.length - 1) {
+        annotatedPgn += ' ';
+      }
+    });
+    
+    // Add result
+    if (game.isCheckmate()) {
+      annotatedPgn += game.turn() === 'w' ? ' 0-1' : ' 1-0';
+    } else if (game.isDraw()) {
+      annotatedPgn += ' 1/2-1/2';
+    }
+    
+    return annotatedPgn;
+  }, [game]);
+
   return {
     game,
     fen,
@@ -75,6 +121,7 @@ export function useChessGame() {
     undoMove,
     lastMove,
     loadPgn,
-    exportPgn
+    exportPgn,
+    exportAnnotatedPgn
   };
 }
