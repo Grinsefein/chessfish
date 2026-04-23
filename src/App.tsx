@@ -44,10 +44,12 @@ import {
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BoardEditor } from "@/components/BoardEditor";
+import { OAuthConnections } from "@/components/OAuthConnections";
 
 import { Chess, type Square } from 'chess.js';
 import { summarizeGame } from "@/services/geminiService";
 import { getOpeningFromFEN, getOpeningMoves } from "@/services/openings";
+import { NNUEFile, NNUE_FILES } from "@/services/nnueService";
 
 const socket = io();
 
@@ -71,7 +73,20 @@ export default function ChessApp() {
     lastMove
   } = useChessGame();
 
-  const { isReady: engineReady, error: engineError, analyze: analyzeLocal, result: localResult, setOptions: setLocalOptions, evaluateFen, reboot: rebootLocal } = useStockfish();
+  const {
+    isReady: engineReady,
+    error: engineError,
+    analyze: analyzeLocal,
+    result: localResult,
+    setOptions: setLocalOptions,
+    evaluateFen,
+    reboot: rebootLocal,
+    nnueEnabled,
+    setNNUEEnabled,
+    currentNNUE,
+    setNNUEFile,
+    nnueDownloadProgress
+  } = useStockfish();
   const { stats, recordGameResult, getDifficultyAdjustment } = usePerformanceScaling();
   
   const [mode, setMode] = useState<'play' | 'analysis' | 'editor'>('play');
@@ -576,8 +591,19 @@ export default function ChessApp() {
     lightSquareStyle: { backgroundColor: '#eeeed2' },
     animationDurationInMs: 200,
     pieces: customPieces,
-    customSquareStyles
-  }), [fen, isGameOver, mode, turn, makeMove, customPieces, selectedSquare, possibleMoves]);
+    squareStyles: customSquareStyles,
+    preDrag: ({ piece, square }: { piece: string; square: string }) => {
+      // Auto-select piece on drag start
+      if (!isGameOver && (mode === 'analysis' || turn === 'w')) {
+        const gameCopy = new Chess(fen);
+        const p = gameCopy.get(square as Square);
+        if (p && p.color === turn) {
+          setSelectedSquare(square as Square);
+        }
+      }
+      return true;
+    }
+  }), [fen, isGameOver, mode, turn, makeMove, customPieces, customSquareStyles, selectedSquare, possibleMoves]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30">
@@ -888,31 +914,76 @@ export default function ChessApp() {
                 </div>
               </CardHeader>
               {engineMode === 'local' && (
-                <div className="p-4 border-b border-white/5 flex gap-4">
-                  <div className="flex-1">
-                    <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50 mb-1 block">Hash (MB)</span>
-                    <input 
-                      type="number" 
-                      min="32" 
-                      max="2048" 
-                      step="32"
-                      value={engineHash} 
-                      onChange={(e) => setEngineHash(Math.max(32, Math.min(2048, Number(e.target.value))))}
-                      className="bg-white/5 border border-white/10 rounded w-full h-6 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50"
-                    />
+                <>
+                  <div className="p-4 border-b border-white/5 flex gap-4">
+                    <div className="flex-1">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50 mb-1 block">Hash (MB)</span>
+                      <input
+                        type="number"
+                        min="32"
+                        max="2048"
+                        step="32"
+                        value={engineHash}
+                        onChange={(e) => setEngineHash(Math.max(32, Math.min(2048, Number(e.target.value))))}
+                        className="bg-white/5 border border-white/10 rounded w-full h-6 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50 mb-1 block">Threads</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="16"
+                        value={engineThreads}
+                        onChange={(e) => setEngineThreads(Math.max(1, Math.min(16, Number(e.target.value))))}
+                        className="bg-white/5 border border-white/10 rounded w-full h-6 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50"
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50 mb-1 block">Threads</span>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="16" 
-                      value={engineThreads} 
-                      onChange={(e) => setEngineThreads(Math.max(1, Math.min(16, Number(e.target.value))))}
-                      className="bg-white/5 border border-white/10 rounded w-full h-6 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50"
-                    />
+                  <div className="p-4 border-b border-white/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-50">NNUE Network</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] text-muted-foreground">Use NNUE</span>
+                        <button
+                          onClick={() => setNNUEEnabled(!nnueEnabled)}
+                          className={`relative w-10 h-5 rounded-full transition-all ${nnueEnabled ? 'bg-green-500/50' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${nnueEnabled ? 'left-5' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+                    </div>
+                    {nnueDownloadProgress !== null && (
+                      <div className="mb-2">
+                        <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-1">
+                          <span>Downloading NNUE...</span>
+                          <span>{Math.round(nnueDownloadProgress)}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-500 transition-all"
+                            style={{ width: `${nnueDownloadProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <select
+                      value={currentNNUE?.name || ''}
+                      onChange={(e) => {
+                        const file = NNUE_FILES.find(f => f.name === e.target.value);
+                        if (file) setNNUEFile(file);
+                      }}
+                      disabled={!nnueEnabled}
+                      className="w-full bg-white/5 border border-white/10 rounded h-7 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                    >
+                      {NNUE_FILES.map(file => (
+                        <option key={file.name} value={file.name}>
+                          {file.name} ({file.size}MB)
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
+                </>
               )}
               {engineMode === 'cloud' && (
                 <div className="px-5 py-2 bg-blue-500/5 border-b border-white/5 flex items-center justify-between">
@@ -1101,6 +1172,8 @@ export default function ChessApp() {
                 </CardContent>
               </Card>
             )}
+
+            <OAuthConnections />
 
             <Card className="bg-card border-white/5 rounded-2xl flex-1 overflow-hidden flex flex-col min-h-[300px]">
               <CardHeader className="p-4 border-b border-white/5 flex flex-row items-center justify-between">

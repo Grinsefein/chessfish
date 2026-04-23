@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { NNUEFile, getDefaultNNUE, downloadNNUE, isNNUEAvailable } from '@/services/nnueService';
 
 export interface EngineLine {
   evaluation: number;
@@ -22,9 +23,40 @@ export function useStockfish() {
   const [result, setResult] = useState<EngineResult | null>(null);
   const [multiPV, setMultiPVState] = useState(3);
   const [rebootKey, setRebootKey] = useState(0);
+  const [nnueEnabled, setNnueEnabled] = useState(true);
+  const [currentNNUE, setCurrentNNUE] = useState<NNUEFile | null>(getDefaultNNUE);
+  const [nnueDownloadProgress, setNnueDownloadProgress] = useState<number | null>(null);
 
   const reboot = useCallback(() => {
     setRebootKey(prev => prev + 1);
+  }, []);
+
+  const setNNUEEnabled = useCallback((enabled: boolean) => {
+    setNnueEnabled(enabled);
+    if (workerRef.current) {
+      workerRef.current.postMessage(`setoption name Use NNUE value ${enabled}`);
+    }
+  }, []);
+
+  const setNNUEFile = useCallback(async (file: NNUEFile) => {
+    if (!isNNUEAvailable(file.name)) {
+      setNnueDownloadProgress(0);
+      const downloaded = await downloadNNUE(file, (progress) => {
+        setNnueDownloadProgress(progress);
+      });
+      setNnueDownloadProgress(null);
+      if (!downloaded) {
+        throw new Error(`Failed to download NNUE file: ${file.name}`);
+      }
+    }
+    setCurrentNNUE(file);
+    if (workerRef.current) {
+      workerRef.current.postMessage(`setoption name EvalFile value ${file.name}`);
+    }
+  }, []);
+
+  const refreshNNUE = useCallback(() => {
+    setCurrentNNUE(getDefaultNNUE());
   }, []);
 
   useEffect(() => {
@@ -231,6 +263,10 @@ export function useStockfish() {
         worker.postMessage('uci');
         worker.postMessage('isready');
         worker.postMessage(`setoption name MultiPV value ${multiPV}`);
+        worker.postMessage(`setoption name Use NNUE value ${nnueEnabled}`);
+        if (currentNNUE) {
+          worker.postMessage(`setoption name EvalFile value ${currentNNUE.name}`);
+        }
 
       } catch (err) {
         console.error('Failed to initialize Stockfish:', err);
@@ -295,5 +331,20 @@ export function useStockfish() {
     });
   }, [isReady]);
 
-  return { isReady, error, analyze, stop, result, setOptions, evaluateFen, reboot };
+  return {
+    isReady,
+    error,
+    analyze,
+    stop,
+    result,
+    setOptions,
+    evaluateFen,
+    reboot,
+    nnueEnabled,
+    setNNUEEnabled,
+    currentNNUE,
+    setNNUEFile,
+    nnueDownloadProgress,
+    refreshNNUE
+  };
 }
