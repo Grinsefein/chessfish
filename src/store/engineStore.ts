@@ -393,9 +393,16 @@ export const useEngineStore = create<EngineState>()(
           
           // Set up message handler
           worker.onmessage = (e) => {
-            const message = e.data;
+            const rawMessage = e.data;
+            if (typeof rawMessage !== 'string') return;
+
+            // UCI messages can be multi-line
+            const lines = rawMessage.split('\n');
             
-            if (typeof message === 'string') {
+            for (let message of lines) {
+              message = message.trim();
+              if (!message) continue;
+
               // Parse engine output
               if (message.includes('uciok')) {
                 // UCI acknowledged, now configure options
@@ -403,23 +410,32 @@ export const useEngineStore = create<EngineState>()(
                 worker.postMessage(`setoption name Hash value ${current.hashSize}`);
                 worker.postMessage(`setoption name Threads value ${current.threads}`);
                 worker.postMessage(`setoption name MultiPV value ${current.multiPv}`);
+                worker.postMessage(`setoption name Skill Level value ${current.skillLevel}`);
                 if (!current.useNNUE) {
                   worker.postMessage('setoption name Use NNUE value false');
                 }
                 worker.postMessage('isready');
-              } else if (message.includes('readyok')) {
+              } 
+              
+              if (message.includes('readyok')) {
                 // Engine is ready for commands
                 set({ 
                   status: 'ready',
                   statusMessage: `${engineConfig.name} ready`,
                 });
-              } else if (message.includes('bestmove')) {
+              } 
+              
+              if (message.startsWith('bestmove')) {
                 const match = message.match(/bestmove\s+(\S+)/);
-                if (match) {
+                if (match && match[1] !== '(none)') {
                   get().setBestMove(match[1]);
+                } else {
+                  get().setBestMove(null as any); // Type cast to allow null if needed, or handle (none)
                 }
                 set({ isAnalyzing: false });
-              } else if (message.includes('info') && message.includes('depth')) {
+              } 
+              
+              if (message.startsWith('info') && message.includes('depth')) {
                 // Parse analysis info
                 const depthMatch = message.match(/depth\s+(\d+)/);
                 const cpMatch = message.match(/score\s+cp\s+(-?\d+)/);

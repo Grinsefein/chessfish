@@ -188,7 +188,9 @@ function ChessApp() {
         const moves = game.moves({ square: selectedSquare as Square, verbose: true });
         moves.forEach((move) => {
           styles[move.to] = {
-            backgroundColor: 'rgba(250, 204, 21, 0.3)'
+            background: 'radial-gradient(circle, rgba(74, 222, 128, 0.6) 25%, transparent 25%)',
+            backgroundSize: '50% 50%',
+            backgroundPosition: 'center'
           };
         });
       } catch (e) {
