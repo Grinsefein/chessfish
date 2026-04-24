@@ -21,6 +21,17 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
   const [status, setStatus] = useState<'playing' | 'correct' | 'incorrect' | 'loading'>('loading');
   const [stats, setStats] = useState({ total: 0, solved: 0, successRate: 0 });
   const [showHint, setShowHint] = useState(false);
+  const [boardWidth, setBoardWidth] = useState(400);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setBoardWidth(window.innerWidth < 640 ? 300 : 400);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (userId) {
@@ -178,7 +189,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
           <Chessboard
             position={game.fen()}
             onPieceDrop={onPieceDrop}
-            boardWidth={window.innerWidth < 640 ? 300 : 400}
+            boardWidth={boardWidth}
             customBoardStyle={{
               borderRadius: '0'
             }}

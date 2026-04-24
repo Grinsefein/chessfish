@@ -73,7 +73,7 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
               : "bg-primary border-primary text-white shadow-[0_4px_0_0_#4a6728]"
           )}
         >
-          {isAnalyzing ? <Pause size={16} lg:size={24} /> : <Play size={16} lg:size={24} className="ml-0.5 lg:ml-1" />}
+          {isAnalyzing ? <Pause size={18} className="lg:w-6 lg:h-6" /> : <Play size={18} className="ml-0.5 lg:ml-1 lg:w-6 lg:h-6" />}
         </Button>
 
         {/* Navigation Buttons */}
@@ -84,7 +84,7 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
             onClick={onPrevMove}
             className="h-9 w-9 lg:h-12 lg:w-12 rounded-xl bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-400 hover:text-white"
           >
-            <ChevronLeft size={16} lg:size={24} />
+            <ChevronLeft size={18} className="lg:w-6 lg:h-6" />
           </Button>
           <Button
             variant="outline"
@@ -92,7 +92,7 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
             onClick={onNextMove}
             className="h-9 w-9 lg:h-12 lg:w-12 rounded-xl bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-400 hover:text-white"
           >
-            <ChevronRight size={16} lg:size={24} />
+            <ChevronRight size={18} className="lg:w-6 lg:h-6" />
           </Button>
         </div>
 
@@ -110,9 +110,9 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
         {/* Battery / Energy Status */}
         <div className="flex items-center gap-2 lg:gap-3 px-2 lg:px-4 py-2 lg:py-2.5 rounded-xl bg-zinc-950 border-2 border-zinc-800 relative z-10 shrink-0">
           {energySavingMode ? (
-            <BatteryMedium size={14} lg:size={18} className="text-green-500" />
+            <BatteryMedium size={16} className="text-green-500 lg:w-[18px] lg:h-[18px]" />
           ) : (
-            <Zap size={14} lg:size={18} className="text-amber-400" />
+            <Zap size={16} className="text-amber-400 lg:w-[18px] lg:h-[18px]" />
           )}
           <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">
             {energySavingMode ? 'ECO' : 'MAX'}
@@ -163,7 +163,7 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
               {/* Best indicator */}
               {index === 0 && (
                 <div className="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg bg-primary/10 border-2 border-primary/20 shrink-0 hidden sm:flex">
-                  <Sparkles size={10} lg:size={12} className="text-primary" />
+                  <Sparkles size={10} className="text-primary lg:w-[12px] lg:h-[12px]" />
                   <span className="text-[9px] lg:text-[10px] font-black text-primary uppercase tracking-tighter">Best</span>
                 </div>
               )}

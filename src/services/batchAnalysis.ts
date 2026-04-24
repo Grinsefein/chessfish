@@ -93,7 +93,8 @@ export async function analyzeGameBatch(
 ): Promise<BatchAnalysisResult | null> {
   try {
     const game = new Chess();
-    if (!game.loadPgn(pgn)) {
+    game.loadPgn(pgn);
+    if (game.history().length === 0) {
       throw new Error('Invalid PGN');
     }
     

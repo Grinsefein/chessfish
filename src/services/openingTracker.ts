@@ -96,7 +96,7 @@ export async function updateOpeningStats(
   averageCPL: number
 ): Promise<void> {
   const game = new Chess();
-  if (!game.loadPgn(pgn)) return;
+  if (!game.loadPgn(pgn)) return undefined;
   
   const moves = game.history();
   const opening = detectOpening(moves);

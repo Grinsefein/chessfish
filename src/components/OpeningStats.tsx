@@ -17,6 +17,7 @@ interface OpeningStat {
   losses: number;
   winRate: number;
   averageAccuracy: number;
+  averageCPL?: number;
 }
 
 export const OpeningStats: React.FC<OpeningStatsProps> = ({ userId }) => {
@@ -43,7 +44,7 @@ export const OpeningStats: React.FC<OpeningStatsProps> = ({ userId }) => {
       getBestOpenings(userId)
     ]);
     
-    setStats(activeTab === 'white' ? whiteStats : blackStats);
+    setStats(activeTab === 'white' ? whiteStats as OpeningStat[] : blackStats as OpeningStat[]);
     setProblems(problemStats);
     setBest(bestStats);
     setIsLoading(false);
@@ -53,7 +54,7 @@ export const OpeningStats: React.FC<OpeningStatsProps> = ({ userId }) => {
     if (userId) {
       const loadTabStats = async () => {
         const tabStats = await getOpeningStats(userId, activeTab === 'problems' ? undefined : activeTab);
-        setStats(tabStats);
+        setStats(tabStats as OpeningStat[]);
       };
       loadTabStats();
     }

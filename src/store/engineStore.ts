@@ -6,7 +6,7 @@ export type EngineStatus = 'offline' | 'booting' | 'ready' | 'error';
 export type EngineVersion = 'stockfish-13' | 'stockfish-14' | 'stockfish-16' | 'stockfish-18' | 'lc0';
 export type AnalysisMode = 'depth' | 'time';
 export type AnimationSpeed = 'slow' | 'default' | 'fast';
-export type ActiveView = 'play' | 'analyze' | 'import' | 'explorer';
+export type ActiveView = 'play' | 'analyze' | 'import' | 'upload' | 'explorer';
 
 interface EngineConfig {
   id: EngineType;

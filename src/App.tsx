@@ -109,10 +109,10 @@ function ChessApp() {
 
   // Analysis mode - trigger engine when in analyze view
   useEffect(() => {
-    if (activeView === 'analyze' && engineStatus === 'ready' && !isAnalyzing) {
+    if (activeView === 'analyze' && engineStatus === 'ready') {
       engineStore.analyze(boardFen);
     }
-  }, [activeView, engineStatus, isAnalyzing, engineStore, boardFen]);
+  }, [activeView, engineStatus, engineStore, boardFen]);
 
   // Handle batch PGN analysis
   const handlePgnUpload = async (pgn: string) => {
@@ -175,53 +175,61 @@ function ChessApp() {
   // Board Options Configuration
   const boardOptions = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
-    const arrows: any[] = [];
-
-    // Draw engine arrows if enabled
-    if (drawArrows && engineLines.length > 0 && activeView === 'analyze') {
-      engineLines.forEach((line, idx) => {
-        if (line.bestMove && line.bestMove.length >= 4) {
-          const from = line.bestMove.substring(0, 2);
-          const to = line.bestMove.substring(2, 4);
-          arrows.push([
-            from,
-            to,
-            idx === 0 ? '#10b981' : 'rgba(156, 163, 175, 0.4)'
-          ]);
-        }
-      });
-    }
-
-    if (lastMove && previewIndex === null) {
-      styles[lastMove.from] = { backgroundColor: 'rgba(255, 255, 150, 0.7)' };
-      styles[lastMove.to] = { backgroundColor: 'rgba(255, 255, 150, 0.7)' };
-    }
-
-    if (game.inCheck()) {
-      const kingPos = game.board().flat().find(p => p?.type === 'k' && p.color === game.turn());
-      if (kingPos) {
-        styles[kingPos.square] = {
-          backgroundColor: 'rgba(255, 0, 0, 0.5)',
-          borderRadius: '50%'
-        };
-      }
-    }
-
+    
+    // Highlight selected square
     if (selectedSquare) {
-      styles[selectedSquare] = { backgroundColor: 'rgba(255, 255, 255, 0.2)' };
+      styles[selectedSquare] = {
+        backgroundColor: 'rgba(74, 222, 128, 0.5)',
+        border: '2px solid #4ade80'
+      };
+      
+      // Calculate and highlight legal moves (pre-move feature)
       try {
         const moves = game.moves({ square: selectedSquare as Square, verbose: true });
-        moves.forEach((m) => {
-          styles[m.to] = {
-            background: m.captured 
-              ? 'radial-gradient(circle, transparent 60%, rgba(0,0,0,0.4) 65%)'
-              : 'radial-gradient(circle, rgba(0,0,0,0.4) 20%, transparent 25%)',
-            borderRadius: '50%'
+        moves.forEach((move) => {
+          styles[move.to] = {
+            backgroundColor: 'rgba(250, 204, 21, 0.3)'
           };
         });
       } catch (e) {
-        // Ignore invalid squares
+        // Invalid square, ignore
       }
+    }
+    
+    // Highlight last move
+    if (lastMove) {
+      styles[lastMove.from] = {
+        backgroundColor: 'rgba(250, 204, 21, 0.3)'
+      };
+      styles[lastMove.to] = {
+        backgroundColor: 'rgba(250, 204, 21, 0.3)'
+      };
+    }
+    
+    // Highlight preview move
+    if (previewIndex !== null && previewIndex > 0) {
+      const prevMove = history[previewIndex];
+      styles[prevMove.from as string] = {
+        backgroundColor: 'rgba(250, 204, 21, 0.3)'
+      };
+      styles[prevMove.to as string] = {
+        backgroundColor: 'rgba(250, 204, 21, 0.3)'
+      };
+    }
+
+    // Generate arrows for engine lines
+    const arrows: string[] = [];
+    if (drawArrows && engineLines.length > 0 && activeView === 'analyze') {
+      engineLines.slice(0, 3).forEach((line) => {
+        if (line.pv && line.bestMove) {
+          const moves = line.pv.split(' ');
+          for (let i = 0; i < Math.min(moves.length - 1, 3); i++) {
+            const from = moves[i].substring(0, 2);
+            const to = moves[i].substring(2, 4);
+            arrows.push(`${from}${to}`);
+          }
+        }
+      });
     }
 
     return {
