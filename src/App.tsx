@@ -58,6 +58,10 @@ function ChessApp() {
     drawArrows
   } = engineStore;
 
+  useEffect(() => {
+    engineStore.init();
+  }, []);
+
   const { getDifficultyAdjustment } = usePerformanceScaling();
   
   const [selectedBot, setSelectedBot] = useState(BOTS[0]);
@@ -196,9 +200,8 @@ function ChessApp() {
   const boardOptions = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
     
-    // Highlight selected square removed - no green outline
-      
-      // Calculate and highlight legal moves (pre-move feature) - show as dots
+    // Highlight legal moves (pre-move feature) - show as dots when piece selected
+    if (selectedSquare) {
       try {
         const moves = game.moves({ square: selectedSquare as Square, verbose: true });
         moves.forEach((move) => {
@@ -414,7 +417,7 @@ function ChessApp() {
               >
                 <RotateCcw size={16} />
               </button>
-              <button onClick={() => navigate('/settings')} className="text-zinc-500 hover:text-white transition-colors p-1">
+              <button onClick={() => navigate('/settings')} className="text-zinc-500 hover:text-white transition-colors p-1 lg:hidden">
                 <SettingsIcon size={16} />
               </button>
               <div className="hidden sm:block w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-black text-xs text-white">CF</div>

@@ -6,31 +6,50 @@ import { Server } from "socket.io";
 import http from "http";
 import { spawn, ChildProcess } from "child_process";
 import fs from "fs";
+import { EventEmitter } from "events";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Stockfish Engine Manager
-class StockfishEngine {
+class StockfishEngine extends EventEmitter {
   private engine: ChildProcess | null = null;
   private isReady: boolean = false;
   private isActive: boolean = false;
-  private analysisCallbacks: Map<string, (result: any) => void> = new Map();
+  private currentFen: string | null = null;
   private enginePath: string = '/usr/local/bin/stockfish';
+  private currentAnalysis: any = null;
+  private currentMultiPvLines: Map<number, any> = new Map();
+  private logs: string[] = [];
+  private maxLogs: number = 100;
 
   constructor() {
-    // Don't auto-start - wait for activation
+    super();
+  }
+
+  private addLog(message: string) {
+    const logEntry = `[${new Date().toLocaleTimeString()}] ${message}`;
+    this.logs.push(logEntry);
+    if (this.logs.length > this.maxLogs) {
+      this.logs.shift();
+    }
+    this.emit('log', logEntry);
+  }
+
+  getLogs() {
+    return this.logs;
   }
 
   activate(path?: string) {
     if (this.isActive) {
-      console.log('Engine already active');
+      this.addLog('Engine already active');
       return { success: true, message: 'Engine already active' };
     }
     
     if (path) this.enginePath = path;
     this.startEngine();
     this.isActive = true;
+    this.emit('status', this.getStatus());
     return { success: true, message: 'Engine activation started' };
   }
 
@@ -45,12 +64,14 @@ class StockfishEngine {
       this.engine.kill();
       this.engine = null;
     }
+    this.addLog('Engine deactivated');
+    this.emit('status', this.getStatus());
     return { success: true, message: 'Engine deactivated' };
   }
 
   private startEngine() {
     try {
-      console.log(`Starting Stockfish from: ${this.enginePath}`);
+      this.addLog(`Starting Stockfish from: ${this.enginePath}`);
       this.engine = spawn(this.enginePath);
       
       this.engine.stdout?.on('data', (data) => {
@@ -59,12 +80,13 @@ class StockfishEngine {
       });
 
       this.engine.stderr?.on('data', (data) => {
-        console.error('Stockfish error:', data.toString());
+        this.addLog(`STDERR: ${data.toString()}`);
       });
 
       this.engine.on('close', (code) => {
-        console.log(`Stockfish process exited with code ${code}`);
+        this.addLog(`Stockfish process exited with code ${code}`);
         this.isReady = false;
+        this.emit('status', this.getStatus());
         // Only restart if still active
         if (this.isActive) {
           setTimeout(() => this.startEngine(), 1000);
@@ -74,13 +96,15 @@ class StockfishEngine {
       // Initialize UCI
       this.sendCommand('uci');
     } catch (error) {
-      console.error('Failed to start Stockfish:', error);
+      this.addLog(`Failed to start Stockfish: ${error}`);
       this.isReady = false;
+      this.emit('status', this.getStatus());
     }
   }
 
-  private sendCommand(command: string) {
+  public sendCommand(command: string) {
     if (this.engine?.stdin) {
+      this.addLog(`Sent: ${command}`);
       this.engine.stdin.write(command + '\n');
     }
   }
@@ -89,122 +113,92 @@ class StockfishEngine {
     const lines = output.split('\n');
     
     for (const line of lines) {
-      if (line.startsWith('uciok')) {
-        // UCI acknowledged, configure options and request ready check
-        this.sendCommand('setoption name MultiPV value 3');
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+
+      this.addLog(`Engine: ${trimmedLine}`);
+
+      if (trimmedLine.startsWith('uciok')) {
         this.sendCommand('isready');
       }
       
-      if (line.startsWith('readyok')) {
-        // Engine is ready for commands
+      if (trimmedLine.startsWith('readyok')) {
         this.isReady = true;
+        this.emit('status', this.getStatus());
       }
 
       // Parse analysis info
-      if (line.startsWith('info') && line.includes('score')) {
-        this.parseInfoLine(line);
+      if (trimmedLine.startsWith('info') && trimmedLine.includes('depth')) {
+        this.parseInfoLine(trimmedLine);
       }
 
       // Parse bestmove
-      if (line.startsWith('bestmove')) {
-        const parts = line.split(' ');
+      if (trimmedLine.startsWith('bestmove')) {
+        const parts = trimmedLine.split(' ');
         const bestMove = parts[1];
-        this.notifyCallbacks(bestMove);
+        if (this.currentAnalysis) {
+          this.currentAnalysis.bestMove = bestMove === '(none)' ? null : bestMove;
+          this.emit('result', {
+            fen: this.currentFen,
+            ...this.currentAnalysis
+          });
+          this.currentAnalysis = null;
+        }
       }
     }
   }
 
-  private currentAnalysis: any = null;
-
-  private currentMultiPvLines: Map<number, any> = new Map();
-
   private parseInfoLine(line: string) {
-    const parts = line.split(' ');
-    let score = 0;
-    let depth = 0;
-    let pv = '';
-    let multipv = 1;
+    const depthMatch = line.match(/depth\s+(\d+)/);
+    const cpMatch = line.match(/score\s+cp\s+(-?\d+)/);
+    const mateMatch = line.match(/score\s+mate\s+(-?\d+)/);
+    const multipvMatch = line.match(/multipv\s+(\d+)/);
+    const pvMatch = line.match(/pv\s+(.+)/);
+    const npsMatch = line.match(/nps\s+(\d+)/);
+    const nodesMatch = line.match(/nodes\s+(\d+)/);
+    const timeMatch = line.match(/time\s+(\d+)/);
 
-    for (let i = 0; i < parts.length; i++) {
-      if (parts[i] === 'score') {
-        if (parts[i + 1] === 'cp') {
-          score = parseFloat(parts[i + 2]) / 100;
-        } else if (parts[i + 1] === 'mate') {
-          score = parseFloat(parts[i + 2]) > 0 ? 100 : -100;
-        }
-      }
-      if (parts[i] === 'depth') {
-        depth = parseInt(parts[i + 1]);
-      }
-      if (parts[i] === 'multipv') {
-        multipv = parseInt(parts[i + 1]);
-      }
-      if (parts[i] === 'pv') {
-        pv = parts.slice(i + 1).join(' ');
-      }
-    }
+    if (!depthMatch) return;
 
-    // Store this line in the Multi-PV map
-    if (pv) {
-      this.currentMultiPvLines.set(multipv, {
-        evaluation: score,
-        depth,
-        bestMove: pv.split(' ')[0] || '',
-        pv
-      });
-
-      // Build the analysis object with all lines
-      const lines: any[] = [];
-      const sortedKeys = Array.from(this.currentMultiPvLines.keys()).sort((a, b) => a - b);
-      for (const key of sortedKeys) {
-        lines.push(this.currentMultiPvLines.get(key));
-      }
-
+    const depth = parseInt(depthMatch[1], 10);
+    const multipv = multipvMatch ? parseInt(multipvMatch[1], 10) : 1;
+    const nps = npsMatch ? parseInt(npsMatch[1], 10) : 0;
+    const nodes = nodesMatch ? parseInt(nodesMatch[1], 10) : 0;
+    const time = timeMatch ? parseInt(timeMatch[1], 10) : 0;
+...
       this.currentAnalysis = {
         evaluation: lines[0]?.evaluation || 0,
         bestMove: lines[0]?.bestMove || '',
         depth,
+        nps,
+        nodes,
+        time,
         lines
       };
-    }
-  }
 
-  private notifyCallbacks(bestMove: string) {
-    if (this.currentAnalysis) {
-      this.currentAnalysis.bestMove = bestMove;
-      this.analysisCallbacks.forEach((callback) => {
-        callback(this.currentAnalysis);
+      this.emit('info', {
+        fen: this.currentFen,
+        ...this.currentAnalysis
       });
-      this.analysisCallbacks.clear();
     }
-    this.currentAnalysis = null;
   }
 
-  async analyze(fen: string, depth: number = 15, time: number = 5000, multiPv: number = 3): Promise<any> {
-    return new Promise((resolve) => {
-      if (!this.isReady) {
-        resolve({ error: 'Engine not ready' });
-        return;
-      }
+  async analyze(fen: string, depth: number = 15, multiPv: number = 3) {
+    if (!this.isReady) return;
 
-      // Clear previous Multi-PV lines and set new MultiPV option
-      this.currentMultiPvLines.clear();
-      this.sendCommand(`setoption name MultiPV value ${multiPv}`);
+    this.currentFen = fen;
+    this.currentMultiPvLines.clear();
+    this.currentAnalysis = null;
+    
+    this.sendCommand('stop');
+    this.sendCommand('ucinewgame');
+    this.sendCommand(`setoption name MultiPV value ${multiPv}`);
+    this.sendCommand(`position fen ${fen}`);
+    this.sendCommand(`go depth ${depth}`);
+  }
 
-      const callbackId = Date.now().toString();
-      this.analysisCallbacks.set(callbackId, resolve);
-
-      this.sendCommand(`position fen ${fen}`);
-      this.sendCommand(`go depth ${depth}`);
-
-      // Timeout fallback
-      setTimeout(() => {
-        if (this.analysisCallbacks.has(callbackId)) {
-          this.analysisCallbacks.delete(callbackId);
-          resolve({ error: 'Analysis timeout' });
-        }
-      }, time);
-    });
+  stop() {
+    this.sendCommand('stop');
   }
 
   getStatus() {
@@ -215,10 +209,6 @@ class StockfishEngine {
       path: this.enginePath
     };
   }
-
-  updateConfig(path: string, settings: any) {
-    console.log('Engine config update requested (not implemented):', path, settings);
-  }
 }
 
 const stockfishEngine = new StockfishEngine();
@@ -226,7 +216,7 @@ const stockfishEngine = new StockfishEngine();
 async function startServer() {
   const app = express();
 
-  // Enable Cross-Origin Isolation for SharedArrayBuffer (required by Stockfish WASM)
+  // Enable Cross-Origin Isolation for SharedArrayBuffer
   app.use((req, res, next) => {
     res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
@@ -243,59 +233,33 @@ async function startServer() {
 
   const PORT = 4000;
 
-  // Socket.io for Real-time moves/Cloud Engine
+  // Broadcast engine events to all clients
+  stockfishEngine.on('status', (status) => io.emit('engine:status', status));
+  stockfishEngine.on('info', (info) => io.emit('engine:info', info));
+  stockfishEngine.on('result', (result) => io.emit('engine:result', result));
+  stockfishEngine.on('log', (log) => io.emit('engine:log', log));
+
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    // Send initial status
+    // Send initial status and logs
     socket.emit("engine:status", stockfishEngine.getStatus());
+    socket.emit("engine:logs", stockfishEngine.getLogs());
 
     socket.on("engine:activate", (data) => {
-      console.log("Activating server engine:", data);
-      const result = stockfishEngine.activate(data?.path);
-      socket.emit("engine:activation_result", result);
-      io.emit("engine:status", stockfishEngine.getStatus());
+      stockfishEngine.activate(data?.path);
     });
 
     socket.on("engine:deactivate", () => {
-      console.log("Deactivating server engine");
-      const result = stockfishEngine.deactivate();
-      socket.emit("engine:deactivation_result", result);
-      io.emit("engine:status", stockfishEngine.getStatus());
+      stockfishEngine.deactivate();
     });
 
-    socket.on("engine:update_config", (data) => {
-      console.log("Updating server engine config:", data);
-      stockfishEngine.updateConfig(data.path, data.settings);
-      io.emit("engine:status", stockfishEngine.getStatus());
+    socket.on("engine:stop", () => {
+      stockfishEngine.stop();
     });
 
-    socket.on("engine:analyze", async (payload) => {
-      console.log("Engine analysis requested for fen:", payload.fen, "multiPv:", payload.multiPv);
-      
-      try {
-        const result = await stockfishEngine.analyze(
-          payload.fen,
-          payload.depth || 15,
-          payload.time || 5000,
-          payload.multiPv || 3
-        );
-        
-        socket.emit("engine:result", {
-          fen: payload.fen,
-          evaluation: result.evaluation || 0,
-          bestMove: result.bestMove || '',
-          lines: result.lines || [],
-          depth: result.depth,
-          error: result.error
-        });
-      } catch (error) {
-        console.error("Analysis error:", error);
-        socket.emit("engine:result", {
-          fen: payload.fen,
-          error: 'Analysis failed'
-        });
-      }
+    socket.on("engine:analyze", (payload) => {
+      stockfishEngine.analyze(payload.fen, payload.depth || 15, payload.multiPv || 3);
     });
 
     socket.on("disconnect", () => {
@@ -304,97 +268,29 @@ async function startServer() {
   });
 
   // API routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  // Batch analysis endpoint
-  app.post("/api/analyze/batch", express.json(), async (req, res) => {
-    const { fens, depth = 18, multiPv = 3 } = req.body;
-    
-    if (!Array.isArray(fens) || fens.length === 0) {
-      return res.status(400).json({ error: "Invalid request: fens must be a non-empty array" });
-    }
-    
-    if (fens.length > 100) {
-      return res.status(400).json({ error: "Too many positions. Maximum is 100." });
-    }
-    
-    try {
-      const results = [];
-      
-      for (const fen of fens) {
-        const result = await stockfishEngine.analyze(fen, depth, 10000, multiPv);
-        results.push({
-          fen,
-          evaluation: result.evaluation || 0,
-          bestMove: result.bestMove || '',
-          depth: result.depth,
-          lines: result.lines || []
-        });
-      }
-      
-      res.json({ results });
-    } catch (error) {
-      console.error("Batch analysis error:", error);
-      res.status(500).json({ error: "Analysis failed" });
-    }
-  });
-
-  // Analyze single position
-  app.post("/api/analyze/position", express.json(), async (req, res) => {
-    const { fen, depth = 18, multiPv = 3 } = req.body;
-    
-    if (!fen) {
-      return res.status(400).json({ error: "FEN is required" });
-    }
-    
-    try {
-      const result = await stockfishEngine.analyze(fen, depth, 10000, multiPv);
-      res.json({
-        fen,
-        evaluation: result.evaluation || 0,
-        bestMove: result.bestMove || '',
-        depth: result.depth,
-        lines: result.lines || []
-      });
-    } catch (error) {
-      console.error("Position analysis error:", error);
-      res.status(500).json({ error: "Analysis failed" });
-    }
-  });
-
-  // Get engine status
   app.get("/api/engine/status", (req, res) => {
     res.json(stockfishEngine.getStatus());
   });
 
-  // Get position cache stats
-  app.get("/api/cache/stats", async (req, res) => {
-    try {
-      // This would query Supabase - for now return placeholder
-      res.json({ total: 0, hits: 0, message: "Cache stats endpoint ready" });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get cache stats" });
-    }
+  app.get("/api/engine/logs", (req, res) => {
+    res.json(stockfishEngine.getLogs());
   });
 
   // Vite middleware for development
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const isProd = process.env.NODE_ENV === "production";
   
   if (!isProd) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "custom", // Use custom to handle index.html manually
+      appType: "custom",
     });
     
     app.use(vite.middlewares);
 
     app.get("*", async (req, res, next) => {
       const url = req.originalUrl;
-      if (url.startsWith('/api') || url.startsWith('/socket.io')) {
-        return next();
-      }
+      if (url.startsWith('/api') || url.startsWith('/socket.io')) return next();
 
       try {
         let template = await fs.promises.readFile(path.resolve(__dirname, "index.html"), "utf-8");
@@ -402,16 +298,13 @@ async function startServer() {
         res.status(200).set({ "Content-Type": "text/html" }).end(template);
       } catch (e: any) {
         vite.ssrFixStacktrace(e);
-        console.error(e.stack);
         res.status(500).end(e.stack);
       }
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
   server.listen(PORT, "0.0.0.0", () => {

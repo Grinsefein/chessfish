@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { io, Socket } from 'socket.io-client';
 
 export type EngineType = 'local-wasm' | 'local-legacy' | 'cloud';
 export type EngineStatus = 'offline' | 'booting' | 'ready' | 'error';
@@ -18,24 +19,24 @@ interface EngineConfig {
 
 export const ENGINES: EngineConfig[] = [
   {
+    id: 'cloud',
+    name: 'Stockfish 16.1 (Pro Cloud)',
+    description: 'High-performance server-side engine for maximum accuracy',
+    isCloud: true,
+  },
+  {
     id: 'local-wasm',
-    name: 'Stockfish 16.1 (WASM)',
-    description: 'Latest local engine with NNUE support',
+    name: 'Stockfish 16.1 (Local)',
+    description: 'Runs in your browser using WASM technology',
     url: '/stockfish.js',
     isCloud: false,
   },
   {
     id: 'local-legacy',
     name: 'Stockfish 10 (Legacy)',
-    description: 'Older version for compatibility',
+    description: 'Lightweight local engine for older devices',
     url: 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js',
     isCloud: false,
-  },
-  {
-    id: 'cloud',
-    name: 'Stockfish Cloud Backend',
-    description: 'Server-side engine with higher depth',
-    isCloud: true,
   },
 ];
 
@@ -49,7 +50,7 @@ interface EngineState {
   
   // Connection
   worker: Worker | null;
-  socket: any | null;
+  socket: Socket | null;
   
   // Command logs
   commandLogs: string[];
@@ -59,6 +60,9 @@ interface EngineState {
   currentEvaluation: number;
   bestMove: string | null;
   depth: number;
+  nps: number;
+  nodes: number;
+  time: number;
   lines: Array<{
     evaluation: number;
     isMate: boolean;
@@ -161,7 +165,7 @@ export const useEngineStore = create<EngineState>()(
   persist(
     (set, get) => ({
       // Initial state
-      selectedEngine: 'local-wasm',
+      selectedEngine: 'cloud',
       status: 'offline',
       statusMessage: 'Engine not started',
       
@@ -218,10 +222,15 @@ export const useEngineStore = create<EngineState>()(
         set({ 
           selectedEngine: engine,
           status: 'offline',
-          statusMessage: 'Engine switched. Click Boot to activate.',
+          statusMessage: 'Engine switched.',
           worker: null,
           socket: null,
         });
+        
+        // Auto-boot if it's the cloud engine to sync state
+        if (engine === 'cloud') {
+          get().bootEngine();
+        }
       },
       
       // Set status
@@ -255,17 +264,20 @@ export const useEngineStore = create<EngineState>()(
       
       // Stop analysis
       stopAnalysis: () => {
-        const { worker } = get();
+        const { worker, socket } = get();
         if (worker) {
           worker.postMessage('stop');
+        }
+        if (socket) {
+          socket.emit('engine:stop');
         }
         set({ isAnalyzing: false });
       },
 
       // Trigger analysis for a given FEN
       analyze: (fen: string) => {
-        const { worker, status, analysisMode, maxDepth, maxTimePerMove } = get();
-        if (status !== 'ready' || !worker) return;
+        const { worker, socket, status, analysisMode, maxDepth, maxTimePerMove, multiPv } = get();
+        if (status !== 'ready') return;
         
         // Reset analysis state for new position
         set({ 
@@ -274,16 +286,30 @@ export const useEngineStore = create<EngineState>()(
           currentEvaluation: 0,
           bestMove: null,
           depth: 0,
+          nps: 0,
+          nodes: 0,
+          time: 0,
         });
 
-        worker.postMessage('stop');
-        worker.postMessage('ucinewgame');
-        worker.postMessage(`position fen ${fen}`);
-        
-        if (analysisMode === 'depth') {
-          worker.postMessage(`go depth ${maxDepth}`);
-        } else {
-          worker.postMessage(`go movetime ${maxTimePerMove * 1000}`);
+        if (worker) {
+          worker.postMessage('stop');
+          worker.postMessage('ucinewgame');
+          worker.postMessage(`position fen ${fen}`);
+          
+          if (analysisMode === 'depth') {
+            worker.postMessage(`go depth ${maxDepth}`);
+          } else {
+            worker.postMessage(`go movetime ${maxTimePerMove * 1000}`);
+          }
+        }
+
+        if (socket) {
+          socket.emit('engine:analyze', {
+            fen,
+            depth: maxDepth,
+            multiPv,
+            time: maxTimePerMove * 1000
+          });
         }
       },
       
@@ -324,15 +350,20 @@ export const useEngineStore = create<EngineState>()(
       
       // Set engine settings
       setEngineSettings: (settings) => set((state) => {
-        const { worker, status } = state;
-        if (worker && status === 'ready') {
-          if (settings.hashSize !== undefined) worker.postMessage(`setoption name Hash value ${settings.hashSize}`);
-          if (settings.threads !== undefined) worker.postMessage(`setoption name Threads value ${settings.threads}`);
-          if (settings.multiPv !== undefined) worker.postMessage(`setoption name MultiPV value ${settings.multiPv}`);
-          if (settings.skillLevel !== undefined) worker.postMessage(`setoption name Skill Level value ${settings.skillLevel}`);
-          if (settings.useNNUE !== undefined) worker.postMessage(`setoption name Use NNUE value ${settings.useNNUE}`);
+        const { worker, socket, status } = state;
+        if (status === 'ready') {
+          if (worker) {
+            if (settings.hashSize !== undefined) worker.postMessage(`setoption name Hash value ${settings.hashSize}`);
+            if (settings.threads !== undefined) worker.postMessage(`setoption name Threads value ${settings.threads}`);
+            if (settings.multiPv !== undefined) worker.postMessage(`setoption name MultiPV value ${settings.multiPv}`);
+            if (settings.skillLevel !== undefined) worker.postMessage(`setoption name Skill Level value ${settings.skillLevel}`);
+            if (settings.useNNUE !== undefined) worker.postMessage(`setoption name Use NNUE value ${settings.useNNUE}`);
+            worker.postMessage('isready');
+          }
           
-          worker.postMessage('isready');
+          if (socket) {
+            socket.emit('engine:update_config', { settings });
+          }
         }
         return {
           ...state,
@@ -364,14 +395,47 @@ export const useEngineStore = create<EngineState>()(
       // Navigation Actions
       setActiveView: (view) => set({ activeView: view }),
       
+      // Initialize engine store (check for existing backend connection or local resume)
+      init: () => {
+        const { selectedEngine, socket, worker, status } = get();
+        
+        // For cloud engine
+        if (selectedEngine === 'cloud') {
+          if (socket) {
+            // Verify connection is alive and sync state/logs
+            socket.emit('engine:status');
+            socket.emit('engine:logs');
+          } else {
+            // No socket, need to connect
+            get().bootEngine();
+          }
+          return;
+        }
+
+        // For local engines, resume if it was active
+        if ((status === 'ready' || status === 'booting') && !socket && !worker) {
+          get().bootEngine();
+        }
+      },
+      
       // Engine Lifecycle - Boot (initialize the engine)
       bootEngine: async () => {
         const state = get();
         
-        if (state.status === 'booting' || state.status === 'ready') {
+        if (state.socket && state.selectedEngine === 'cloud') {
+           // Already have a socket, just make sure it's activated
+           state.socket.emit('engine:activate');
+           return;
+        }
+
+        if (state.status === 'booting' || (state.status === 'ready' && state.selectedEngine !== 'cloud')) {
+          console.log('Engine already booting or ready');
           return; // Already running
         }
         
+        console.log('Booting engine:', state.selectedEngine);
+        get().addLog(`Booting engine: ${state.selectedEngine}`);
+
         set({ 
           status: 'booting', 
           statusMessage: 'Initializing engine...',
@@ -389,12 +453,89 @@ export const useEngineStore = create<EngineState>()(
           }
           
           if (engineConfig.isCloud) {
-            // Cloud engine - connect via socket
-            set({ 
-              status: 'ready',
-              statusMessage: 'Cloud engine connected',
-              socket: null, // Would be actual socket connection
+            console.log('Connecting to cloud engine at http://localhost:4000');
+            // Cloud engine - connect via socket to Node.js backend
+            const socket = io('http://localhost:4000');
+            
+            socket.on('connect', () => {
+              console.log('Cloud engine connected');
+              // We don't mark as ready until we get engine:status
             });
+
+            socket.on('engine:status', (status) => {
+              if (status.active) {
+                set({ 
+                    status: status.ready ? 'ready' : 'booting', 
+                    statusMessage: status.ready ? 'Backend engine ready' : 'Backend engine initializing...' 
+                });
+              } else {
+                set({ status: 'offline', statusMessage: 'Backend engine offline' });
+              }
+            });
+
+            socket.on('engine:logs', (logs: string[]) => {
+               set({ commandLogs: logs });
+            });
+
+            socket.on('engine:log', (log: string) => {
+               set((state) => ({ commandLogs: [...state.commandLogs, log] }));
+            });
+
+            socket.on('engine:info', (info) => {
+              if (info.nps) set({ nps: info.nps });
+              if (info.nodes) set({ nodes: info.nodes });
+              if (info.time) set({ time: info.time });
+              
+              if (info.lines) {
+                info.lines.forEach((line: any, idx: number) => {
+                  get().updateLine(idx, {
+                    evaluation: line.evaluation,
+                    isMate: line.isMate || false,
+                    bestMove: line.bestMove,
+                    pv: line.pv,
+                    depth: info.depth || line.depth,
+                  });
+                });
+              }
+            });
+
+            socket.on('engine:result', (result) => {
+              if (result.error) {
+                console.error('Cloud analysis error:', result.error);
+                return;
+              }
+              
+              if (result.bestMove) {
+                get().setBestMove(result.bestMove);
+                set({ isAnalyzing: false });
+              }
+
+              if (result.lines && result.lines.length > 0) {
+                result.lines.forEach((line: any, idx: number) => {
+                  get().updateLine(idx, {
+                    evaluation: line.evaluation,
+                    isMate: line.isMate || false,
+                    bestMove: line.bestMove,
+                    pv: line.pv,
+                    depth: result.depth || line.depth,
+                  });
+                });
+              }
+            });
+
+            socket.on('disconnect', () => {
+              console.log('Cloud engine disconnected');
+              get().addLog('Cloud engine disconnected');
+              set({ status: 'offline', statusMessage: 'Cloud disconnected', socket: null });
+            });
+
+            socket.on('connect_error', (err) => {
+              console.error('Cloud connection error:', err);
+              get().addLog(`Cloud connection error: ${err.message}`);
+              set({ status: 'error', statusMessage: 'Backend connection failed', socket: null });
+            });
+
+            set({ socket });
             return;
           }
           
@@ -413,12 +554,15 @@ export const useEngineStore = create<EngineState>()(
             workerUrl = URL.createObjectURL(blob);
           }
 
+          console.log('Creating worker with URL:', workerUrl);
           const worker = new Worker(workerUrl, { type: 'classic' });
           
           // Set up message handler
           worker.onmessage = (e) => {
             const rawMessage = e.data;
             if (typeof rawMessage !== 'string') return;
+            
+            get().addLog(`Engine: ${rawMessage}`);
 
             // UCI messages can be multi-line
             const lines = rawMessage.split('\n');
@@ -466,10 +610,18 @@ export const useEngineStore = create<EngineState>()(
                 const mateMatch = message.match(/score\s+mate\s+(-?\d+)/);
                 const multipvMatch = message.match(/multipv\s+(\d+)/);
                 const pvMatch = message.match(/pv\s+(.+)/);
+                const npsMatch = message.match(/nps\s+(\d+)/);
+                const nodesMatch = message.match(/nodes\s+(\d+)/);
+                const timeMatch = message.match(/time\s+(\d+)/);
                 
                 if (depthMatch) {
                   const depth = parseInt(depthMatch[1], 10);
                   const multipv = multipvMatch ? parseInt(multipvMatch[1], 10) : 1;
+                  const nps = npsMatch ? parseInt(npsMatch[1], 10) : get().nps;
+                  const nodes = nodesMatch ? parseInt(nodesMatch[1], 10) : get().nodes;
+                  const time = timeMatch ? parseInt(timeMatch[1], 10) : get().time;
+
+                  set({ nps, nodes, time });
                   
                   let eval_ = 0;
                   let isMate = false;
@@ -498,6 +650,7 @@ export const useEngineStore = create<EngineState>()(
           
           worker.onerror = (err) => {
             console.error('Engine error:', err);
+            get().addLog(`Engine Error: ${err.message}`);
             set({
               status: 'error',
               statusMessage: `Engine error: ${err.message}`,
@@ -507,10 +660,13 @@ export const useEngineStore = create<EngineState>()(
           
           // Initialize UCI
           worker.postMessage('uci');
+          get().addLog('Sent: uci');
           
           set({ worker });
           
         } catch (error) {
+          console.error('Failed to boot engine:', error);
+          get().addLog(`Failed to boot engine: ${error instanceof Error ? error.message : 'Unknown error'}`);
           set({
             status: 'error',
             statusMessage: `Failed to boot engine: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -523,6 +679,9 @@ export const useEngineStore = create<EngineState>()(
       shutdownEngine: () => {
         const { worker, socket, isAnalyzing } = get();
         
+        console.log('Shutting down engine...');
+        get().addLog('Shutting down engine...');
+
         if (isAnalyzing && worker) {
           worker.postMessage('stop');
         }
@@ -570,6 +729,9 @@ export const useEngineStore = create<EngineState>()(
         currentEvaluation: 0,
         bestMove: null,
         depth: 0,
+        nps: 0,
+        nodes: 0,
+        time: 0,
         lines: [],
       }),
       
@@ -598,6 +760,7 @@ export const useEngineStore = create<EngineState>()(
       name: 'chessfish-engine-storage',
       partialize: (state) => ({
         selectedEngine: state.selectedEngine,
+        status: state.status,
         multiPv: state.multiPv,
         skillLevel: state.skillLevel,
         hashSize: state.hashSize,
