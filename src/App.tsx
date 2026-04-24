@@ -183,15 +183,22 @@ function ChessApp() {
         border: '2px solid #4ade80'
       };
       
-      // Calculate and highlight legal moves (pre-move feature)
+      // Calculate and highlight legal moves (pre-move feature) - show as dots
       try {
         const moves = game.moves({ square: selectedSquare as Square, verbose: true });
         moves.forEach((move) => {
-          styles[move.to] = {
-            background: 'radial-gradient(circle, rgba(74, 222, 128, 0.6) 25%, transparent 25%)',
-            backgroundSize: '50% 50%',
-            backgroundPosition: 'center'
-          };
+          const isCapture = move.captured;
+          if (isCapture) {
+            // Captures: show ring around the square
+            styles[move.to] = {
+              background: 'radial-gradient(circle, transparent 50%, rgba(250, 204, 21, 0.5) 50%)'
+            };
+          } else {
+            // Regular moves: show dot in center
+            styles[move.to] = {
+              background: 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 20%, transparent 25%)'
+            };
+          }
         });
       } catch (e) {
         // Invalid square, ignore

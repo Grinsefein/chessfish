@@ -245,7 +245,13 @@ export const useEngineStore = create<EngineState>()(
       clearLogs: () => set({ commandLogs: [] }),
       
       // Start analysis
-      startAnalysis: () => set({ isAnalyzing: true }),
+      startAnalysis: () => {
+        const { worker, status } = get();
+        if (worker && status === 'ready') {
+          worker.postMessage('go infinite');
+          set({ isAnalyzing: true });
+        }
+      },
       
       // Stop analysis
       stopAnalysis: () => {
@@ -261,7 +267,17 @@ export const useEngineStore = create<EngineState>()(
         const { worker, status, analysisMode, maxDepth, maxTimePerMove } = get();
         if (status !== 'ready' || !worker) return;
         
+        // Reset analysis state for new position
+        set({ 
+          isAnalyzing: true,
+          lines: [],
+          currentEvaluation: 0,
+          bestMove: null,
+          depth: 0,
+        });
+
         worker.postMessage('stop');
+        worker.postMessage('ucinewgame');
         worker.postMessage(`position fen ${fen}`);
         
         if (analysisMode === 'depth') {
@@ -269,8 +285,6 @@ export const useEngineStore = create<EngineState>()(
         } else {
           worker.postMessage(`go movetime ${maxTimePerMove * 1000}`);
         }
-        
-        set({ isAnalyzing: true });
       },
       
       // Set analysis results (bulk)
@@ -288,17 +302,24 @@ export const useEngineStore = create<EngineState>()(
           lines.push({ evaluation: 0, isMate: false, bestMove: '', pv: '', depth: 0 });
         }
         lines[index] = line;
+        
+        // Only update currentEvaluation if it's the primary line (index 0)
+        // or if we don't have a primary line yet
+        const currentEvaluation = index === 0 ? line.evaluation : state.currentEvaluation;
+        const depth = index === 0 ? line.depth : state.depth;
+
         return {
           lines,
-          currentEvaluation: lines[0]?.evaluation ?? 0,
-          depth: line.depth,
+          currentEvaluation,
+          depth: Math.max(state.depth, depth),
         };
       }),
 
       // Update best move after search completes
       setBestMove: (bestMove) => set((state) => ({
         bestMove,
-        lines: state.lines.map((l, i) => i === 0 ? { ...l, bestMove } : l),
+        // Also update the first line if it's missing the best move
+        lines: state.lines.map((l, i) => (i === 0 && !l.bestMove) ? { ...l, bestMove } : l),
       })),
       
       // Set engine settings
@@ -308,7 +329,10 @@ export const useEngineStore = create<EngineState>()(
           if (settings.hashSize !== undefined) worker.postMessage(`setoption name Hash value ${settings.hashSize}`);
           if (settings.threads !== undefined) worker.postMessage(`setoption name Threads value ${settings.threads}`);
           if (settings.multiPv !== undefined) worker.postMessage(`setoption name MultiPV value ${settings.multiPv}`);
+          if (settings.skillLevel !== undefined) worker.postMessage(`setoption name Skill Level value ${settings.skillLevel}`);
           if (settings.useNNUE !== undefined) worker.postMessage(`setoption name Use NNUE value ${settings.useNNUE}`);
+          
+          worker.postMessage('isready');
         }
         return {
           ...state,
