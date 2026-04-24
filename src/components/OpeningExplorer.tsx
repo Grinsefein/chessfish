@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { 
   getOpeningExplorerData, 
   getMastersExplorerData, 
@@ -8,7 +7,7 @@ import {
   type OpeningExplorerData,
   type OpeningMove 
 } from '@/services/openings';
-import { BookOpen, Trophy, Users, ChevronRight, BarChart3 } from 'lucide-react';
+import { BookOpen, Trophy, Users, BarChart3, Search } from 'lucide-react';
 
 interface OpeningExplorerProps {
   fen: string;
@@ -67,54 +66,67 @@ export function OpeningExplorer({ fen, onMoveSelect }: OpeningExplorerProps) {
   };
 
   return (
-    <Card className="bg-card border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-      <CardHeader className="p-4 border-b border-white/5">
-        <div className="flex items-center justify-between">
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-white/5">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <BookOpen size={16} className="text-primary" />
-            <span className="text-sm font-black uppercase tracking-widest">Opening Explorer</span>
-          </div>
-          <div className="flex bg-white/5 rounded p-0.5">
-            <button
-              onClick={() => setDatabase('lichess')}
-              className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${
-                database === 'lichess' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              <Users size={10} className="inline mr-1" />
-              Lichess
-            </button>
-            <button
-              onClick={() => setDatabase('masters')}
-              className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${
-                database === 'masters' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              <Trophy size={10} className="inline mr-1" />
-              Masters
-            </button>
+            <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <BookOpen size={16} className="text-blue-400" />
+            </div>
+            <span className="font-bold text-white">Theory / Explorer</span>
           </div>
         </div>
-      </CardHeader>
 
-      <CardContent className="p-4">
+        {/* Database Toggle */}
+        <div className="flex p-1 rounded-xl bg-zinc-950/50 border border-white/5">
+          <button
+            onClick={() => setDatabase('lichess')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+              database === 'lichess' 
+                ? 'bg-zinc-800 text-white shadow-sm' 
+                : 'text-zinc-500 hover:text-zinc-300'
+            )}
+          >
+            <Users size={12} />
+            Lichess
+          </button>
+          <button
+            onClick={() => setDatabase('masters')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+              database === 'masters' 
+                ? 'bg-zinc-800 text-white shadow-sm' 
+                : 'text-zinc-500 hover:text-zinc-300'
+            )}
+          >
+            <Trophy size={12} />
+            Masters
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
           </div>
         ) : data?.opening ? (
-          <div className="mb-4 p-3 bg-white/5 rounded-lg">
-            <p className="text-xs font-bold text-primary">{data.opening.name}</p>
-            <p className="text-[10px] text-muted-foreground">ECO: {data.opening.eco}</p>
+          <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+            <p className="text-sm font-bold text-white">{data.opening.name}</p>
+            <p className="text-xs text-zinc-400">ECO: {data.opening.eco}</p>
           </div>
         ) : null}
 
         {data && data.moves.length > 0 ? (
-          <div className="space-y-2 max-h-[300px] overflow-y-auto">
-            <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2">
-              Top Moves ({data.moves.length})
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+              Popular Moves ({data.moves.length})
             </p>
-            {data.moves.slice(0, 10).map((move, index) => {
+            
+            {data.moves.slice(0, 8).map((move, index) => {
               const percentages = getWinPercentage(move);
               return (
                 <button
@@ -122,44 +134,52 @@ export function OpeningExplorer({ fen, onMoveSelect }: OpeningExplorerProps) {
                   onClick={() => handleMoveClick(move)}
                   className="w-full text-left group"
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  {/* Move Row */}
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground w-4">{index + 1}.</span>
-                      <span className="text-sm font-bold text-primary group-hover:scale-110 transition-transform">
+                      <span className="text-xs text-zinc-500 w-5">{index + 1}.</span>
+                      <span className="font-bold text-white group-hover:text-primary transition-colors">
                         {move.san}
                       </span>
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {move.gameCount.toLocaleString()} games
-                    </div>
+                    <span className="text-xs text-zinc-500">
+                      {(move.gameCount / 1000).toFixed(1)}k games
+                    </span>
                   </div>
                   
-                  {/* Win Rate Bar */}
-                  <div className="flex h-2 w-full rounded-full overflow-hidden bg-white/5">
+                  {/* Stacked Progress Bar */}
+                  <div className="flex h-2.5 w-full rounded-full overflow-hidden">
+                    {/* White wins - light/blue tint */}
                     <div 
-                      className="h-full bg-white/80" 
+                      className="h-full bg-blue-400" 
                       style={{ width: `${percentages.white}%` }} 
                     />
+                    {/* Draws - gray */}
                     <div 
-                      className="h-full bg-muted-foreground/40" 
+                      className="h-full bg-zinc-500" 
                       style={{ width: `${percentages.draws}%` }} 
                     />
+                    {/* Black wins - dark/red tint */}
                     <div 
-                      className="h-full bg-red-500/80" 
+                      className="h-full bg-red-400" 
                       style={{ width: `${percentages.black}%` }} 
                     />
                   </div>
                   
-                  <div className="flex justify-between mt-1 text-[9px] font-bold">
-                    <span className="text-white/80">{percentages.white}% W</span>
-                    <span className="text-muted-foreground">{percentages.draws}% D</span>
-                    <span className="text-red-400">{percentages.black}% B</span>
+                  {/* Percentage Labels */}
+                  <div className="flex justify-between mt-1.5 text-[10px]">
+                    <span className="text-blue-400 font-medium">{percentages.white}%</span>
+                    <span className="text-zinc-500">{percentages.draws}%</span>
+                    <span className="text-red-400 font-medium">{percentages.black}%</span>
                   </div>
 
+                  {/* Masters rating info */}
                   {database === 'masters' && move.averageRating > 0 && (
-                    <div className="flex items-center gap-1 mt-1 text-[9px] text-yellow-400">
-                      <BarChart3 size={8} />
-                      <span>Avg Rating: {move.averageRating}</span>
+                    <div className="flex items-center gap-1 mt-2 px-2 py-1 rounded-lg bg-yellow-500/10 w-fit">
+                      <BarChart3 size={10} className="text-yellow-500" />
+                      <span className="text-[10px] text-yellow-500 font-medium">
+                        Avg: {move.averageRating}
+                      </span>
                     </div>
                   )}
                 </button>
@@ -167,14 +187,14 @@ export function OpeningExplorer({ fen, onMoveSelect }: OpeningExplorerProps) {
             })}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <BookOpen size={24} className="mx-auto mb-2 opacity-30" />
-            <p className="text-xs">
-              {loading ? 'Loading...' : 'No opening data available for this position'}
+          <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+            <Search size={32} className="mb-3 opacity-30" />
+            <p className="text-sm">
+              {loading ? 'Loading opening data...' : 'No opening data for this position'}
             </p>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
