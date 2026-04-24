@@ -1,0 +1,45 @@
+{
+  "name": "Chessfish",
+  "short_name": "Chessfish",
+  "description": "A powerful chess analysis and playing application with Stockfish engine integration",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#4ade80",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "Play vs Bot",
+      "short_name": "Play",
+      "description": "Start a new game against the computer",
+      "url": "/?mode=play",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "any"
+        }
+      ]
+    },
+    {
+      "name": "Analysis",
+      "short_name": "Analyze",
+      "description": "Analyze chess positions",
+      "url": "/?mode=analyze",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "any"
+        }
+      ]
+    }
+  ]
+}

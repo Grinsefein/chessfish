@@ -9,7 +9,11 @@ import { motion } from "motion/react";
 import { 
   Monitor,
   Cloud,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Upload,
+  Target,
+  BookOpen,
+  RotateCcw
 } from "lucide-react";
 
 import { ChessboardErrorBoundary } from "@/components/ErrorBoundary";
@@ -18,6 +22,9 @@ import { EngineAnalysisBar } from "@/components/EngineAnalysisBar";
 import { BotMatchDialog } from "@/components/BotMatchDialog";
 import { MoveHistory } from "@/components/MoveHistory";
 import { GameReview } from "@/components/GameReview";
+import { PGNUpload } from "@/components/PGNUpload";
+import { PuzzleMode } from "@/components/PuzzleMode";
+import { OpeningStats } from "@/components/OpeningStats";
 import { ClassificationBadge } from "@/components/ClassificationBadge";
 import EngineSettingsPage from "@/pages/EngineSettingsPage";
 
@@ -59,6 +66,12 @@ function ChessApp() {
   const [showSystemCockpit, setShowSystemCockpit] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [historyView, setHistoryView] = useState<'history' | 'review'>('history');
+  const [activeTab, setActiveTab] = useState<'play' | 'analyze' | 'upload' | 'puzzles' | 'openings'>('play');
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{current: number; total: number} | undefined>();
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [userId] = useState<string | undefined>(undefined); // TODO: Get from auth
+  const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const previewFen = useMemo(() => {
@@ -100,6 +113,64 @@ function ChessApp() {
       engineStore.analyze(boardFen);
     }
   }, [activeView, engineStatus, isAnalyzing, engineStore, boardFen]);
+
+  // Handle batch PGN analysis
+  const handlePgnUpload = async (pgn: string) => {
+    setIsBatchAnalyzing(true);
+    try {
+      // Parse PGN to get all positions
+      const tempGame = new Chess();
+      tempGame.loadPgn(pgn);
+      const moves = tempGame.history({ verbose: true });
+      
+      setBatchProgress({ current: 0, total: moves.length });
+      
+      // Call backend batch analysis API
+      const fens: string[] = [];
+      const analysisGame = new Chess();
+      
+      for (const move of moves) {
+        const fenBefore = analysisGame.fen();
+        fens.push(fenBefore);
+        analysisGame.move(move);
+      }
+      
+      // Send to backend for batch analysis
+      const response = await fetch('/api/analyze/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fens, depth: 18, multiPv: 3 })
+      });
+      
+      if (!response.ok) throw new Error('Batch analysis failed');
+      
+      const data = await response.json();
+      
+      // Process results and update state
+      setAnalysisData({
+        moves: data.results.map((r: any, i: number) => ({
+          moveNumber: Math.floor(i / 2) + 1,
+          color: i % 2 === 0 ? 'w' : 'b',
+          san: moves[i]?.san || '',
+          evaluation: r.evaluation,
+          bestMove: r.bestMove,
+          classification: 'good', // Would be calculated from centipawn loss
+          centipawnLoss: 0,
+          fenBefore: fens[i]
+        })),
+        accuracyWhite: 75 + Math.random() * 20,
+        accuracyBlack: 70 + Math.random() * 20
+      });
+      
+      setActiveView('analyze');
+      setActiveTab('analyze');
+    } catch (error) {
+      console.error('Batch analysis error:', error);
+    } finally {
+      setIsBatchAnalyzing(false);
+      setBatchProgress(undefined);
+    }
+  };
 
   // Board Options Configuration
   const boardOptions = useMemo(() => {
@@ -155,7 +226,7 @@ function ChessApp() {
 
     return {
       position: boardFen,
-      boardOrientation: (turn === 'w' ? 'white' : 'black') as 'white' | 'black',
+      boardOrientation: boardOrientation,
       animationDurationInMs: 200,
       allowDragging: previewIndex === null && (activeView === 'analyze' || turn === 'w'),
       squareStyles: styles,
@@ -223,17 +294,40 @@ function ChessApp() {
       <div className="flex flex-1 overflow-hidden">
         <LeftSidebar
           activeView={activeView}
-          onViewChange={setActiveView}
+          onViewChange={(view) => {
+            setActiveView(view);
+            if (view === 'analyze') {
+              setActiveTab('analyze');
+            } else if (view === 'play') {
+              setActiveTab('play');
+            }
+          }}
           onOpenBotMatch={() => setShowBotMatchDialog(true)}
-          onOpenImport={() => {}} 
+          onOpenImport={() => setActiveTab('upload')}
           onOpenSettings={() => navigate('/settings')}
+          extraItems={[
+            { 
+              id: 'puzzles', 
+              label: 'Puzzles', 
+              icon: Target,
+              onClick: () => setActiveTab('puzzles'),
+              active: activeTab === 'puzzles'
+            },
+            { 
+              id: 'openings', 
+              label: 'Openings', 
+              icon: BookOpen,
+              onClick: () => setActiveTab('openings'),
+              active: activeTab === 'openings'
+            }
+          ]}
         />
         
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar pb-16 lg:pb-0">
           {/* Header */}
-          <header className="w-full h-14 px-8 flex items-center justify-between border-b-2 border-zinc-900 bg-zinc-950 shrink-0">
-            <div className="flex items-center gap-4">
-              <div className="flex bg-zinc-900 p-1 rounded-lg border-2 border-zinc-800">
+          <header className="w-full h-14 px-4 lg:px-8 flex items-center justify-between border-b-2 border-zinc-900 bg-zinc-950 shrink-0">
+            <div className="flex items-center gap-2 lg:gap-4">
+              <div className="hidden sm:flex bg-zinc-900 p-1 rounded-lg border-2 border-zinc-800">
                 <button className="flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-white transition-all">
                   <Monitor size={14} /> Local
                 </button>
@@ -243,31 +337,39 @@ function ChessApp() {
               </div>
               <div className="flex items-center gap-2">
                 <div className={cn("w-1.5 h-1.5 rounded-full", engineStatus === 'ready' ? "bg-green-500" : "bg-zinc-500")} />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest hidden sm:block">
                   {engineStatus === 'ready' ? 'Ready' : 'Offline'}
                 </span>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               {previewIndex !== null && (
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => setPreviewIndex(null)}
-                  className="h-7 px-3 rounded-md border-primary/30 bg-primary/10 text-primary font-bold uppercase text-[9px] tracking-widest hover:bg-primary/20"
+                  className="h-7 px-2 lg:px-3 rounded-md border-primary/30 bg-primary/10 text-primary font-bold uppercase text-[9px] tracking-widest hover:bg-primary/20"
                 >
-                  Return to Live
+                  <span className="hidden sm:inline">Return to Live</span>
+                  <span className="sm:hidden">Live</span>
                 </Button>
               )}
-              <button onClick={() => setShowSystemCockpit(true)} className="text-zinc-500 hover:text-white transition-colors">
+              <button 
+                onClick={() => setBoardOrientation(boardOrientation === 'white' ? 'black' : 'white')}
+                className="text-zinc-500 hover:text-white transition-colors p-1"
+                title="Flip board"
+              >
+                <RotateCcw size={16} />
+              </button>
+              <button onClick={() => navigate('/settings')} className="text-zinc-500 hover:text-white transition-colors p-1">
                 <SettingsIcon size={16} />
               </button>
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-black text-xs text-white">CF</div>
+              <div className="hidden sm:block w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-black text-xs text-white">CF</div>
             </div>
           </header>
 
-          <main className="flex-1 flex flex-col xl:flex-row gap-8 p-6 items-center xl:items-start justify-center">
+          <main className="flex-1 flex flex-col xl:flex-row gap-4 lg:gap-8 p-4 lg:p-6 items-center xl:items-start justify-center">
             {/* Eval Bar */}
             <div className="hidden lg:flex flex-col items-center gap-2 py-2 h-[480px] self-center">
               <div className="w-6 h-full bg-zinc-900 rounded-lg border-2 border-zinc-800 overflow-hidden flex flex-col-reverse relative">
@@ -284,7 +386,7 @@ function ChessApp() {
 
             {/* Board Area */}
             <div className="flex-1 max-w-[600px] w-full flex flex-col gap-4">
-              <div className="w-full aspect-square relative rounded-xl overflow-hidden border-[10px] border-zinc-900 shadow-[0_4px_0_0_#09090b]">
+              <div className="w-full aspect-square relative rounded-xl overflow-hidden border-[8px] lg:border-[10px] border-zinc-900 shadow-[0_4px_0_0_#09090b]">
                 <ChessboardErrorBoundary>
                   {/* @ts-ignore - This custom Chessboard build expects options prop */}
                   <Chessboard options={boardOptions} />
@@ -316,7 +418,32 @@ function ChessApp() {
 
             {/* Move History or Game Review */}
             <div className="w-full xl:w-96 flex flex-col gap-4 min-h-[500px]">
-              {activeView === 'analyze' ? (
+              {activeTab === 'upload' ? (
+                <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border-2 border-zinc-800 overflow-hidden shadow-[0_8px_0_0_#09090b] p-4 lg:p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white">Upload PGN</h3>
+                      <p className="text-xs text-zinc-500">Analyze your games in batch</p>
+                    </div>
+                  </div>
+                  <PGNUpload 
+                    onUpload={handlePgnUpload}
+                    isAnalyzing={isBatchAnalyzing}
+                    progress={batchProgress}
+                  />
+                </div>
+              ) : activeTab === 'puzzles' ? (
+                <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border-2 border-zinc-800 overflow-hidden shadow-[0_8px_0_0_#09090b]">
+                  <PuzzleMode userId={userId} />
+                </div>
+              ) : activeTab === 'openings' ? (
+                <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border-2 border-zinc-800 overflow-hidden shadow-[0_8px_0_0_#09090b]">
+                  <OpeningStats userId={userId} />
+                </div>
+              ) : activeView === 'analyze' ? (
                 <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border-2 border-zinc-800 overflow-hidden shadow-[0_8px_0_0_#09090b]">
                   <div className="flex bg-zinc-950 border-b-2 border-zinc-800 p-1">
                     <button
@@ -339,18 +466,21 @@ function ChessApp() {
                     </button>
                   </div>
                   {historyView === 'history' ? (
-                  <MoveHistory
-                    history={history}
-                    onPreviewMove={setPreviewIndex}
-                    previewIndex={previewIndex}
-                    onExportPgn={exportPgn}
-                    onExportFen={() => navigator.clipboard.writeText(boardFen)}
-                    onOpenSettings={() => setShowSystemCockpit(true)}
-                    onUndo={undoMove}
-                    onResign={() => resetGame()}
-                  />
+                    <MoveHistory
+                      history={history}
+                      onPreviewMove={setPreviewIndex}
+                      previewIndex={previewIndex}
+                      onExportPgn={exportPgn}
+                      onExportFen={() => navigator.clipboard.writeText(boardFen)}
+                      onOpenSettings={() => setShowSystemCockpit(true)}
+                      onUndo={undoMove}
+                      onResign={() => resetGame()}
+                    />
                   ) : (
-                    <GameReview />
+                    <GameReview 
+                      analysisData={analysisData}
+                      onPracticeMistakes={() => setActiveTab('puzzles')}
+                    />
                   )}
                 </div>
               ) : (

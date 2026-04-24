@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore, type MoveClassification } from '@/store/gameStore';
+import { useEngineStore } from '@/store/engineStore';
 import { AccuracyGauge } from './AccuracyGauge';
 import { cn } from '@/lib/utils';
+import { WhyButton } from './WhyButton';
+import { Brain, RotateCcw } from 'lucide-react';
 import { 
   Sparkles,
   Zap,
@@ -14,6 +17,28 @@ import {
   BookOpen,
   ArrowRight
 } from 'lucide-react';
+
+interface AnalyzedMove {
+  moveNumber: number;
+  color: 'w' | 'b';
+  san: string;
+  evaluation: number;
+  bestMove: string;
+  classification: MoveClassification;
+  centipawnLoss: number;
+  fenBefore: string;
+}
+
+interface GameReviewProps {
+  analysisData?: {
+    moves: AnalyzedMove[];
+    accuracyWhite: number;
+    accuracyBlack: number;
+    openingEco?: string;
+    openingName?: string;
+  };
+  onPracticeMistakes?: () => void;
+}
 
 const CLASSIFICATION_LABELS: Record<MoveClassification, {
   label: string;
@@ -32,27 +57,23 @@ const CLASSIFICATION_LABELS: Record<MoveClassification, {
   book: { label: 'Book Move', color: 'text-amber-600', icon: BookOpen },
 };
 
-export const GameReview: React.FC = () => {
+export const GameReview: React.FC<GameReviewProps> = ({ 
+  analysisData,
+  onPracticeMistakes 
+}) => {
   const { accuracy, counts, pgn, history, setAccuracy, setClassification } = useGameStore();
   const { analyze } = useEngineStore();
+  const [selectedMove, setSelectedMove] = useState<number | null>(null);
 
   const handleReview = async () => {
-    // In a real scenario, this would call the analyzeGame service
-    // For this task, we'll simulate the review since analyzeGame needs a callback to evaluate each move
-    // which requires complex async coordination with the WASM worker.
-
-    // Simulate finding results for the current PGN
-    let currentAccuracy = 85 + Math.random() * 10;
-    setAccuracy(currentAccuracy);
-
-    // Randomly assign some classifications for visual verification
-    setClassification(0, 'book');
-    setClassification(1, 'book');
-    setClassification(2, 'best');
-    setClassification(history.length - 1, 'great');
+    // Trigger batch analysis through the engine
+    // This will be handled by the parent component with batchAnalysis service
+    console.log('Requesting game analysis...');
   };
 
-  if (accuracy === null) {
+  const hasMistakes = counts.blunder > 0 || counts.mistake > 0;
+
+  if (!analysisData && accuracy === null) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 h-full bg-zinc-900 rounded-2xl border-2 border-zinc-800 border-dashed m-4">
         <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center border-2 border-zinc-700">
@@ -126,10 +147,75 @@ export const GameReview: React.FC = () => {
       </div>
 
       {/* Footer Action */}
-      <div className="p-4 bg-zinc-950 border-t-2 border-zinc-800 shrink-0">
-        <button className="w-full py-4 bg-zinc-800 text-white rounded-xl font-black text-xs uppercase tracking-wider border-2 border-zinc-700 shadow-[0_4px_0_0_#09090b] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-3">
-          <Trophy size={18} className="text-primary" />
-          Share Results
+      {/* Move List with Analysis */}
+      {analysisData && (
+        <div className="flex-1 overflow-y-auto border-t-2 border-zinc-800">
+          <div className="p-2 space-y-1">
+            {analysisData.moves.map((move, index) => {
+              const config = CLASSIFICATION_LABELS[move.classification];
+              const Icon = config.icon;
+              const isSelected = selectedMove === index;
+              
+              return (
+                <div
+                  key={index}
+                  onClick={() => setSelectedMove(index)}
+                  className={cn(
+                    "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all",
+                    isSelected ? "bg-zinc-800" : "hover:bg-zinc-900"
+                  )}
+                >
+                  <span className="text-xs text-zinc-500 w-12">
+                    {move.moveNumber}.{move.color === 'b' ? '..' : ''}
+                  </span>
+                  
+                  <span className="text-sm text-white font-mono flex-1">
+                    {move.san}
+                  </span>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-xs", config.color)}>
+                      {move.evaluation > 0 ? '+' : ''}{move.evaluation.toFixed(1)}
+                    </span>
+                    
+                    <div className={cn("w-6 h-6 rounded flex items-center justify-center", config.color.replace('text-', 'bg-') + '/20')}>
+                      <Icon className={cn("w-3 h-3", config.color)} />
+                    </div>
+                    
+                    <WhyButton
+                      fen={move.fenBefore}
+                      userMove={move.san}
+                      userMoveSan={move.san}
+                      evaluation={move.evaluation}
+                      previousEval={index > 0 ? analysisData.moves[index - 1].evaluation : 0}
+                      bestMove={move.bestMove}
+                      classification={move.classification}
+                      centipawnLoss={move.centipawnLoss}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Footer Actions */}
+      <div className="p-4 bg-zinc-950 border-t-2 border-zinc-800 shrink-0 space-y-2">
+        {hasMistakes && onPracticeMistakes && (
+          <button 
+            onClick={onPracticeMistakes}
+            className="w-full py-3 bg-primary/20 text-primary border border-primary/50 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-primary/30 transition-colors"
+          >
+            <Brain className="w-4 h-4" />
+            Practice Mistakes ({counts.blunder + counts.mistake} puzzles)
+          </button>
+        )}
+        
+        <button className="w-full py-3 bg-zinc-800 text-white rounded-xl font-black text-xs uppercase tracking-wider border-2 border-zinc-700 shadow-[0_4px_0_0_#09090b] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-3">
+          <RotateCcw size={16} />
+          Analyze Another Game
         </button>
       </div>
     </div>

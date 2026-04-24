@@ -306,6 +306,77 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Batch analysis endpoint
+  app.post("/api/analyze/batch", express.json(), async (req, res) => {
+    const { fens, depth = 18, multiPv = 3 } = req.body;
+    
+    if (!Array.isArray(fens) || fens.length === 0) {
+      return res.status(400).json({ error: "Invalid request: fens must be a non-empty array" });
+    }
+    
+    if (fens.length > 100) {
+      return res.status(400).json({ error: "Too many positions. Maximum is 100." });
+    }
+    
+    try {
+      const results = [];
+      
+      for (const fen of fens) {
+        const result = await stockfishEngine.analyze(fen, depth, 10000, multiPv);
+        results.push({
+          fen,
+          evaluation: result.evaluation || 0,
+          bestMove: result.bestMove || '',
+          depth: result.depth,
+          lines: result.lines || []
+        });
+      }
+      
+      res.json({ results });
+    } catch (error) {
+      console.error("Batch analysis error:", error);
+      res.status(500).json({ error: "Analysis failed" });
+    }
+  });
+
+  // Analyze single position
+  app.post("/api/analyze/position", express.json(), async (req, res) => {
+    const { fen, depth = 18, multiPv = 3 } = req.body;
+    
+    if (!fen) {
+      return res.status(400).json({ error: "FEN is required" });
+    }
+    
+    try {
+      const result = await stockfishEngine.analyze(fen, depth, 10000, multiPv);
+      res.json({
+        fen,
+        evaluation: result.evaluation || 0,
+        bestMove: result.bestMove || '',
+        depth: result.depth,
+        lines: result.lines || []
+      });
+    } catch (error) {
+      console.error("Position analysis error:", error);
+      res.status(500).json({ error: "Analysis failed" });
+    }
+  });
+
+  // Get engine status
+  app.get("/api/engine/status", (req, res) => {
+    res.json(stockfishEngine.getStatus());
+  });
+
+  // Get position cache stats
+  app.get("/api/cache/stats", async (req, res) => {
+    try {
+      // This would query Supabase - for now return placeholder
+      res.json({ total: 0, hits: 0, message: "Cache stats endpoint ready" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get cache stats" });
+    }
+  });
+
   // Vite middleware for development
   const isProd = process.env.NODE_ENV === "production";
   

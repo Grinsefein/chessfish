@@ -28,12 +28,12 @@ const CLASSIFICATION_CONFIG: Record<MoveClassification, {
   brilliant: {
     icon: Sparkles,
     color: 'bg-teal-500',
-    shadow: 'shadow-[0_4px_0_0_#0d9488] shadow-teal-500/20',
+    shadow: 'shadow-[0_4px_12px_-2px_rgba(20,184,166,0.5)]',
     label: '!!'
   },
   great: {
     icon: Zap,
-    color: 'bg-blue-600',
+    color: 'bg-blue-700',
     shadow: 'shadow-[0_4px_0_0_#1e3a8a]',
     label: '!'
   },
@@ -45,7 +45,7 @@ const CLASSIFICATION_CONFIG: Record<MoveClassification, {
   },
   excellent: {
     icon: ThumbsUp,
-    color: 'bg-green-500',
+    color: 'bg-green-400',
     shadow: 'shadow-[0_4px_0_0_#166534]',
     label: '!'
   },
@@ -101,7 +101,7 @@ export const ClassificationBadge: React.FC<ClassificationBadgeProps> = ({
         initial={{ scale: 0, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 25, delay: 0.25 }}
         className={cn(
           "absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 z-50",
           "w-6 h-6 rounded-full flex items-center justify-center border-2 border-white/20",

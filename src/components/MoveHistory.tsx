@@ -57,14 +57,14 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
         <div className="space-y-1">
           {movePairs.map((pair) => (
             <div key={pair.number} className="flex items-center text-[13px]">
-              <div className="w-10 text-center font-black text-zinc-600 py-2">
+              <div className="w-10 text-center font-black text-zinc-600 py-3">
                 {pair.number}.
               </div>
               
               <button
                 onClick={() => onPreviewMove(pair.white.index)}
                 className={cn(
-                  "flex-1 py-2 px-3 rounded-lg transition-all text-left font-black uppercase tracking-tight",
+                  "flex-1 py-3 px-3 min-h-[44px] rounded-lg transition-all text-left font-black uppercase tracking-tight",
                   previewIndex === pair.white.index 
                     ? "bg-zinc-800 text-white border-b-2 border-zinc-700"
                     : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
@@ -77,7 +77,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
                 <button
                   onClick={() => onPreviewMove(pair.black!.index)}
                   className={cn(
-                    "flex-1 py-2 px-3 rounded-lg transition-all text-left font-black uppercase tracking-tight",
+                    "flex-1 py-3 px-3 min-h-[44px] rounded-lg transition-all text-left font-black uppercase tracking-tight",
                     previewIndex === pair.black.index 
                       ? "bg-zinc-800 text-white border-b-2 border-zinc-700"
                       : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
@@ -101,28 +101,28 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
 
       {/* Utility Row */}
       <div className="grid grid-cols-3 border-t-2 border-2 border-zinc-800 bg-zinc-950">
-        <button onClick={onResign} className="flex flex-col items-center justify-center py-4 hover:bg-zinc-900 transition-colors border-r-2 border-2 border-zinc-800 group">
+        <button onClick={onResign} className="flex flex-col items-center justify-center py-5 min-h-[56px] hover:bg-zinc-900 transition-colors border-r-2 border-2 border-zinc-800 group">
           <Flag size={20} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
         </button>
-        <button onClick={onUndo} className="flex flex-col items-center justify-center py-4 hover:bg-zinc-900 transition-colors border-r-2 border-2 border-zinc-800 group">
+        <button onClick={onUndo} className="flex flex-col items-center justify-center py-5 min-h-[56px] hover:bg-zinc-900 transition-colors border-r-2 border-2 border-zinc-800 group">
           <RotateCcw size={20} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
         </button>
-        <button className="flex flex-col items-center justify-center py-4 hover:bg-zinc-900 transition-colors group">
+        <button className="flex flex-col items-center justify-center py-5 min-h-[56px] hover:bg-zinc-900 transition-colors group">
           <Lightbulb size={20} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
         </button>
       </div>
 
       {/* Bottom Bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-t-2 border-2 border-zinc-800 bg-zinc-950">
-        <div className="flex items-center gap-6">
-          <button onClick={onExportPgn} className="text-zinc-500 hover:text-white transition-colors">
+      <div className="flex items-center justify-between px-4 lg:px-6 py-4 border-t-2 border-2 border-zinc-800 bg-zinc-950">
+        <div className="flex items-center gap-4 lg:gap-6">
+          <button onClick={onExportPgn} className="text-zinc-500 hover:text-white transition-colors p-2">
             <Download size={18} />
           </button>
-          <button onClick={onExportFen} className="text-zinc-500 hover:text-white transition-colors">
+          <button onClick={onExportFen} className="text-zinc-500 hover:text-white transition-colors p-2">
             <Share2 size={18} />
           </button>
         </div>
-        <button onClick={onOpenSettings} className="text-zinc-500 hover:text-white transition-colors">
+        <button onClick={onOpenSettings} className="text-zinc-500 hover:text-white transition-colors p-2">
           <Settings size={18} />
         </button>
       </div>

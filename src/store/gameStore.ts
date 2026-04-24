@@ -36,6 +36,11 @@ interface GameState {
   playerTime: number;
   botTime: number;
   
+  // Retry Mistake Mode
+  retryMode: boolean;
+  retryPosition: { fen: string; mistakeMove: string; bestMove: string } | null;
+  retryResult: 'pending' | 'success' | 'failure' | null;
+  
   // Actions
   setGameState: (state: Partial<GameState>) => void;
   resetGame: () => void;
@@ -48,6 +53,11 @@ interface GameState {
   exportPgn: () => string;
   decrementTimer: (turn: 'w' | 'b') => void;
   resetTimers: () => void;
+  
+  // Retry Mistake Actions
+  enterRetryMode: (position: { fen: string; mistakeMove: string; bestMove: string }) => void;
+  exitRetryMode: () => void;
+  submitRetryMove: (move: string) => 'pending' | 'success' | 'failure';
 }
 
 const INITIAL_TIME = 300; // 5 minutes in seconds
@@ -104,7 +114,6 @@ export const useGameStore = create<GameState>()(
           missed_win: 0,
           book: 0,
         },
-
         isGameOver: false,
         isCheckmate: false,
         isDraw: false,
@@ -112,6 +121,10 @@ export const useGameStore = create<GameState>()(
         
         playerTime: INITIAL_TIME,
         botTime: INITIAL_TIME,
+        
+        retryMode: false,
+        retryPosition: null,
+        retryResult: null,
         
         // Set partial state
         setGameState: (state) => set((prev) => ({ ...prev, ...state })),
@@ -142,6 +155,9 @@ export const useGameStore = create<GameState>()(
           turn: 'w',
           playerTime: INITIAL_TIME,
           botTime: INITIAL_TIME,
+          retryMode: false,
+          retryPosition: null,
+          retryResult: null,
         }),
         
         // Make a move with chess.js validation
@@ -292,6 +308,49 @@ export const useGameStore = create<GameState>()(
           playerTime: INITIAL_TIME,
           botTime: INITIAL_TIME,
         }),
+        
+        // Enter retry mode for a specific mistake position
+        enterRetryMode: (position) => set({
+          retryMode: true,
+          retryPosition: position,
+          retryResult: 'pending',
+          fen: position.fen,
+        }),
+        
+        // Exit retry mode and return to normal game
+        exitRetryMode: () => set((state) => ({
+          retryMode: false,
+          retryPosition: null,
+          retryResult: null,
+          fen: state.pgn 
+            ? (() => {
+                const chess = new Chess();
+                try {
+                  chess.loadPgn(state.pgn);
+                  return chess.fen();
+                } catch {
+                  return STARTING_FEN;
+                }
+              })()
+            : STARTING_FEN,
+        })),
+        
+        // Submit a retry move and check if it matches the engine best move
+        submitRetryMove: (move) => {
+          const state = get();
+          if (!state.retryPosition || !state.retryMode) return 'pending';
+          
+          // Normalize move format for comparison
+          const normalizeMove = (m: string) => m.replace(/[+#!=]/g, '').trim();
+          const normalizedAttempt = normalizeMove(move);
+          const normalizedBest = normalizeMove(state.retryPosition.bestMove);
+          
+          const isCorrect = normalizedAttempt === normalizedBest;
+          const result = isCorrect ? 'success' : 'failure';
+          
+          set({ retryResult: result });
+          return result;
+        },
       };
     },
     {

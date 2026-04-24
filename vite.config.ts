@@ -17,6 +17,18 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'motion'],
+            chess: ['chess.js', 'react-chessboard'],
+            charts: ['recharts'],
+            icons: ['lucide-react'],
+          },
+        },
+      },
+    },
     server: {
       headers: {
         'Cross-Origin-Embedder-Policy': 'require-corp',
