@@ -384,6 +384,17 @@ export const useEngineStore = create<EngineState>()(
             if (typeof message === 'string') {
               // Parse engine output
               if (message.includes('uciok')) {
+                // UCI acknowledged, now configure options
+                const current = get();
+                worker.postMessage(`setoption name Hash value ${current.hashSize}`);
+                worker.postMessage(`setoption name Threads value ${current.threads}`);
+                worker.postMessage(`setoption name MultiPV value ${current.multiPv}`);
+                if (!current.useNNUE) {
+                  worker.postMessage('setoption name Use NNUE value false');
+                }
+                worker.postMessage('isready');
+              } else if (message.includes('readyok')) {
+                // Engine is ready for commands
                 set({ 
                   status: 'ready',
                   statusMessage: `${engineConfig.name} ready`,
@@ -445,20 +456,6 @@ export const useEngineStore = create<EngineState>()(
           
           set({ worker });
           
-          // Configure engine with current settings
-          setTimeout(() => {
-            const current = get();
-            if (current.worker && current.status === 'ready') {
-              current.worker.postMessage(`setoption name Hash value ${current.hashSize}`);
-              current.worker.postMessage(`setoption name Threads value ${current.threads}`);
-              current.worker.postMessage(`setoption name MultiPV value ${current.multiPv}`);
-              if (!current.useNNUE) {
-                current.worker.postMessage('setoption name Use NNUE value false');
-              }
-              current.worker.postMessage('isready');
-            }
-          }, 100);
-          
         } catch (error) {
           set({
             status: 'error',
@@ -497,6 +494,7 @@ export const useEngineStore = create<EngineState>()(
           bestMove: null,
           depth: 0,
           lines: [],
+          commandLogs: [],
         });
       },
       

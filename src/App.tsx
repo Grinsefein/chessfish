@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useGameStore } from "@/store/gameStore";
 import { useEngineStore } from "@/store/engineStore";
 import { usePerformanceScaling } from "@/hooks/usePerformanceScaling";
@@ -13,18 +14,18 @@ import {
 
 import { ChessboardErrorBoundary } from "@/components/ErrorBoundary";
 import { LeftSidebar } from "@/components/layout/LeftSidebar";
-import { SystemCockpit } from "@/components/SystemCockpit";
 import { EngineAnalysisBar } from "@/components/EngineAnalysisBar";
 import { BotMatchDialog } from "@/components/BotMatchDialog";
 import { MoveHistory } from "@/components/MoveHistory";
 import { GameReview } from "@/components/GameReview";
 import { ClassificationBadge } from "@/components/ClassificationBadge";
+import EngineSettingsPage from "@/pages/EngineSettingsPage";
 
 import { Chess, type Square } from 'chess.js';
 import { Chessboard } from "react-chessboard";
 import { cn } from '@/lib/utils';
 
-export default function ChessApp() {
+function ChessApp() {
   const gameStore = useGameStore();
   const {
     fen,
@@ -53,8 +54,9 @@ export default function ChessApp() {
   const { getDifficultyAdjustment } = usePerformanceScaling();
   
   const [selectedBot, setSelectedBot] = useState(BOTS[0]);
-  const [showSystemCockpit, setShowSystemCockpit] = useState(false);
+  const navigate = useNavigate();
   const [showBotMatchDialog, setShowBotMatchDialog] = useState(false);
+  const [showSystemCockpit, setShowSystemCockpit] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [historyView, setHistoryView] = useState<'history' | 'review'>('history');
 
@@ -92,6 +94,13 @@ export default function ChessApp() {
     }
   }, [turn, activeView, isGameOver, engineBestMove, engineStatus, isAnalyzing, makeGameMove, selectedBot, getDifficultyAdjustment, engineStore, fen, previewIndex]);
 
+  // Analysis mode - trigger engine when in analyze view
+  useEffect(() => {
+    if (activeView === 'analyze' && engineStatus === 'ready' && !isAnalyzing) {
+      engineStore.analyze(boardFen);
+    }
+  }, [activeView, engineStatus, isAnalyzing, engineStore, boardFen]);
+
   // Board Options Configuration
   const boardOptions = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
@@ -113,8 +122,8 @@ export default function ChessApp() {
     }
 
     if (lastMove && previewIndex === null) {
-      styles[lastMove.from] = { backgroundColor: 'rgba(255, 255, 0, 0.4)' };
-      styles[lastMove.to] = { backgroundColor: 'rgba(255, 255, 0, 0.4)' };
+      styles[lastMove.from] = { backgroundColor: 'rgba(255, 255, 150, 0.7)' };
+      styles[lastMove.to] = { backgroundColor: 'rgba(255, 255, 150, 0.7)' };
     }
 
     if (game.inCheck()) {
@@ -217,7 +226,7 @@ export default function ChessApp() {
           onViewChange={setActiveView}
           onOpenBotMatch={() => setShowBotMatchDialog(true)}
           onOpenImport={() => {}} 
-          onOpenSettings={() => setShowSystemCockpit(true)}
+          onOpenSettings={() => navigate('/settings')}
         />
         
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
@@ -374,10 +383,17 @@ export default function ChessApp() {
         }}
       />
       
-      <SystemCockpit 
-        open={showSystemCockpit}
-        onOpenChange={setShowSystemCockpit}
-      />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<ChessApp />} />
+        <Route path="/settings" element={<EngineSettingsPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
