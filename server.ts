@@ -90,11 +90,13 @@ class StockfishEngine {
     
     for (const line of lines) {
       if (line.startsWith('uciok')) {
-        this.isReady = true;
+        // UCI acknowledged, configure options and request ready check
         this.sendCommand('setoption name MultiPV value 3');
+        this.sendCommand('isready');
       }
       
       if (line.startsWith('readyok')) {
+        // Engine is ready for commands
         this.isReady = true;
       }
 
