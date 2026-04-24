@@ -312,7 +312,7 @@ function ChessApp() {
       animationDurationInMs: animationMs,
       allowDragging: previewIndex === null && (activeView === 'analyze' || turn === 'w'),
       squareStyles: styles,
-      customArrows: arrows,
+      arrows: arrows,
       darkSquareStyle: { backgroundColor: theme.dark },
       lightSquareStyle: { backgroundColor: theme.light },
       dropOffBoard: 'snapback' as const,
