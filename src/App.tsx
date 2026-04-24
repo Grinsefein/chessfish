@@ -86,23 +86,43 @@ function ChessApp() {
   const boardFen = previewFen || fen;
   const game = useMemo(() => new Chess(boardFen), [boardFen]);
 
+  // Auto-boot engine on mount
+  useEffect(() => {
+    if (engineStatus === 'offline') {
+      engineStore.bootEngine();
+    }
+  }, [engineStatus, engineStore]);
+
   // Bot logic
   useEffect(() => {
+    // Only act in 'play' view when it's bot's turn ('b'), game isn't over, and no preview is active
     if (activeView === 'play' && turn === 'b' && !isGameOver && previewIndex === null) {
-      if (engineBestMove && engineStatus === 'ready') {
-        const adjustment = getDifficultyAdjustment(selectedBot.elo);
-        const dynamicThinkTime = Math.max(100, (selectedBot.thinkTime / 2) + adjustment.thinkTimeBonus);
-        
-        const timer = setTimeout(() => {
-          makeGameMove({
-            from: engineBestMove.substring(0, 2),
-            to: engineBestMove.substring(2, 4),
-            promotion: engineBestMove.length > 4 ? engineBestMove[4] : 'q'
-          });
-        }, dynamicThinkTime); 
-        return () => clearTimeout(timer);
-      } else if (engineStatus === 'ready' && !isAnalyzing) {
-        engineStore.analyze(fen);
+      if (engineStatus === 'ready') {
+        if (engineBestMove) {
+          // We have a best move, make it after a delay
+          const adjustment = getDifficultyAdjustment(selectedBot.elo);
+          const dynamicThinkTime = Math.max(100, (selectedBot.thinkTime / 2) + adjustment.thinkTimeBonus);
+          
+          const timer = setTimeout(() => {
+            // Safety check: is it still the bot's turn and same FEN?
+            if (turn === 'b' && !isGameOver) {
+              const move = makeGameMove({
+                from: engineBestMove.substring(0, 2),
+                to: engineBestMove.substring(2, 4),
+                promotion: engineBestMove.length > 4 ? engineBestMove[4] : 'q'
+              });
+              if (move) {
+                engineStore.resetAnalysis();
+              }
+            }
+          }, dynamicThinkTime); 
+          return () => clearTimeout(timer);
+        } else if (!isAnalyzing) {
+          // Bot's turn but no best move yet, start analysis
+          engineStore.analyze(fen);
+        }
+      } else if (engineStatus === 'offline') {
+        engineStore.bootEngine();
       }
     }
   }, [turn, activeView, isGameOver, engineBestMove, engineStatus, isAnalyzing, makeGameMove, selectedBot, getDifficultyAdjustment, engineStore, fen, previewIndex]);
@@ -176,12 +196,7 @@ function ChessApp() {
   const boardOptions = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
     
-    // Highlight selected square
-    if (selectedSquare) {
-      styles[selectedSquare] = {
-        backgroundColor: 'rgba(74, 222, 128, 0.5)',
-        border: '2px solid #4ade80'
-      };
+    // Highlight selected square removed - no green outline
       
       // Calculate and highlight legal moves (pre-move feature) - show as dots
       try {
@@ -216,14 +231,22 @@ function ChessApp() {
     }
     
     // Highlight preview move
-    if (previewIndex !== null && previewIndex > 0) {
-      const prevMove = history[previewIndex];
-      styles[prevMove.from as string] = {
-        backgroundColor: 'rgba(250, 204, 21, 0.3)'
-      };
-      styles[prevMove.to as string] = {
-        backgroundColor: 'rgba(250, 204, 21, 0.3)'
-      };
+    if (previewIndex !== null && previewIndex >= 0) {
+      // Create a temporary game to get the move details for the previewIndex
+      const tempGame = new Chess();
+      let moveAtIdx = null;
+      for (let i = 0; i <= previewIndex; i++) {
+        moveAtIdx = tempGame.move(history[i]);
+      }
+      
+      if (moveAtIdx) {
+        styles[moveAtIdx.from] = {
+          backgroundColor: 'rgba(250, 204, 21, 0.3)'
+        };
+        styles[moveAtIdx.to] = {
+          backgroundColor: 'rgba(250, 204, 21, 0.3)'
+        };
+      }
     }
 
     // Generate arrows for engine lines
@@ -258,6 +281,9 @@ function ChessApp() {
           to: targetSquare,
           promotion: 'q'
         });
+        if (move) {
+          engineStore.resetAnalysis();
+        }
         return !!move;
       },
       onSquareClick: ({ square }: { square: string }) => {
