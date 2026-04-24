@@ -47,7 +47,8 @@ export default function ChessApp() {
     isAnalyzing,
     activeView,
     setActiveView,
-    drawArrows
+    drawArrows,
+    depth
   } = engineStore;
 
   const { getDifficultyAdjustment } = usePerformanceScaling();
@@ -70,6 +71,13 @@ export default function ChessApp() {
 
   const boardFen = previewFen || fen;
   const game = useMemo(() => new Chess(boardFen), [boardFen]);
+
+  // Analysis logic
+  useEffect(() => {
+    if (activeView === 'analyze' && !isAnalyzing && engineStatus === 'ready') {
+      engineStore.analyze(boardFen);
+    }
+  }, [activeView, isAnalyzing, engineStatus, boardFen, engineStore]);
 
   // Bot logic
   useEffect(() => {
@@ -286,12 +294,8 @@ export default function ChessApp() {
                 <div
                   className="absolute z-50 pointer-events-none"
                   style={{
-                    left: turn === 'w'
-                      ? `${(lastMove.to.charCodeAt(0) - 97) * 12.5}%`
-                      : `${(104 - lastMove.to.charCodeAt(0)) * 12.5}%`,
-                    top: turn === 'w'
-                      ? `${(8 - parseInt(lastMove.to[1])) * 12.5}%`
-                      : `${(parseInt(lastMove.to[1]) - 1) * 12.5}%`,
+                    left: (turn === 'w' ? (lastMove.to.charCodeAt(0) - 97) : (104 - lastMove.to.charCodeAt(0))) * 12.5 + 10.5 + '%',
+                    top: (turn === 'w' ? (8 - parseInt(lastMove.to[1])) : (parseInt(lastMove.to[1]) - 1)) * 12.5 + 2.0 + '%',
                     width: '12.5%',
                     height: '12.5%'
                   }}
@@ -299,6 +303,16 @@ export default function ChessApp() {
                   <ClassificationBadge
                     classification={gameStore.classifications[previewIndex ?? (history.length - 1)]}
                   />
+                </div>
+              )}
+
+              {/* Depth Indicator Overlay */}
+              {activeView === 'analyze' && isAnalyzing && (
+                <div className="absolute bottom-2 right-2 px-3 py-1.5 bg-zinc-950/80 border border-zinc-800 rounded-lg flex items-center gap-2 z-40 backdrop-blur-sm">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                    Depth {depth}
+                  </span>
                 </div>
               )}
               </div>

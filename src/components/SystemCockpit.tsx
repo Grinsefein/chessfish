@@ -80,7 +80,7 @@ export const SystemCockpit: React.FC<SystemCockpitProps> = ({ open, onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0 rounded-[2rem] border-2 border-zinc-800 bg-zinc-900 shadow-[0_12px_0_0_#09090b] overflow-hidden flex flex-col">
+      <DialogContent fullWidth className="max-w-4xl h-[85vh] p-0 gap-0 rounded-[2rem] border-2 border-zinc-800 bg-zinc-900 shadow-[0_12px_0_0_#09090b] overflow-hidden flex flex-col">
         {/* Header */}
         <DialogHeader className="p-8 pb-6 border-b-2 border-zinc-800 shrink-0 bg-zinc-950">
           <div className="flex items-center gap-5">

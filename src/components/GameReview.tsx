@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore, type MoveClassification } from '@/store/gameStore';
+import { useEngineStore } from '@/store/engineStore';
 import { AccuracyGauge } from './AccuracyGauge';
 import { cn } from '@/lib/utils';
 import { 
