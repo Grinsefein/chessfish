@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useEngineStore, ENGINES, ENGINE_VERSIONS } from '@/store/engineStore';
+import { useEngineStore, ENGINE_VERSIONS } from '@/store/engineStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,11 +9,8 @@ import { cn } from '@/lib/utils';
 import { 
   Cpu, 
   Sparkles,
-  BarChart3,
   Play,
   Square,
-  Cloud,
-  Monitor,
   ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -22,21 +19,24 @@ export default function EngineSettingsPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('backend');
   const engineStore = useEngineStore();
+  const initEngineStore = useEngineStore((state) => state.init);
+  const refreshCloudSnapshot = useEngineStore((state) => state.refreshCloudSnapshot);
+  const subscribeToCloudLogs = useEngineStore((state) => state.subscribeToCloudLogs);
 
   React.useEffect(() => {
-    engineStore.init();
-    engineStore.refreshCloudSnapshot();
-    engineStore.subscribeToCloudLogs();
+    initEngineStore();
+    refreshCloudSnapshot();
+    subscribeToCloudLogs();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        engineStore.refreshCloudSnapshot();
+        refreshCloudSnapshot();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [engineStore]);
+  }, [initEngineStore, refreshCloudSnapshot, subscribeToCloudLogs]);
   
   const {
     status,
@@ -58,6 +58,8 @@ export default function EngineSettingsPage() {
     setAnalysisMode,
     setMaxDepth,
     setMaxTimePerMove,
+    setEngineVersion,
+    clearLogs,
   } = engineStore;
 
   const effectiveVersion = selectedEngine === 'cloud' ? cloudRuntime.engineVersion : selectedEngineVersion;
@@ -148,7 +150,7 @@ export default function EngineSettingsPage() {
                   {ENGINE_VERSIONS.map((version) => (
                     <button
                       key={version.id}
-                      onClick={() => engineStore.setEngineVersion(version.id)}
+                      onClick={() => setEngineVersion(version.id)}
                       className={cn(
                         "p-3 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b]",
                         effectiveVersion === version.id
@@ -268,7 +270,7 @@ export default function EngineSettingsPage() {
                 <div className="p-3 sm:p-5 rounded-xl bg-zinc-800 border-2 border-zinc-700">
                   <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Effective Runtime</div>
                   <div className="text-lg font-black text-white uppercase tracking-tight mt-2">
-                    {selectedEngine === 'cloud' ? `${cloudRuntime.engine} / ${cloudRuntime.engineVersion}` : 'Browser Worker'}
+                    {`${cloudRuntime.engine} / ${cloudRuntime.engineVersion}`}
                   </div>
                 </div>
                 <div className="p-3 sm:p-5 rounded-xl bg-zinc-800 border-2 border-zinc-700">
@@ -280,42 +282,18 @@ export default function EngineSettingsPage() {
                 <div className="p-3 sm:p-5 rounded-xl bg-zinc-800 border-2 border-zinc-700">
                   <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Engine Path</div>
                   <div className="text-sm font-black text-white tracking-tight mt-2 break-all">
-                    {selectedEngine === 'cloud' ? cloudRuntime.path : 'Browser Worker'}
+                    {cloudRuntime.path}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2 sm:space-y-4">
-                <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Runtime Selection</Label>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-4">
-                  {ENGINES.map((engine) => (
-                    <button
-                      key={engine.id}
-                      onClick={() => engineStore.selectEngine(engine.id)}
-                      disabled={status === 'ready' || status === 'booting'}
-                      className={cn(
-                        "flex items-center gap-3 sm:gap-4 p-3 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-300",
-                        selectedEngine === engine.id
-                          ? 'bg-zinc-800 border-primary shadow-[0_2px_0_0_#4a6728] sm:shadow-[0_4px_0_0_#4a6728] translate-y-[-1px] sm:translate-y-[-2px]'
-                          : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b]'
-                      )}
-                    >
-                      <div className={cn("w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl flex items-center justify-center border-2 shrink-0",
-                        selectedEngine === engine.id
-                          ? (engine.isCloud ? 'bg-blue-500 text-white border-blue-600' : 'bg-purple-500 text-white border-purple-600')
-                          : (engine.isCloud ? 'bg-zinc-900 text-blue-400 border-zinc-700' : 'bg-zinc-900 text-purple-400 border-zinc-700')
-                      )}>
-                        {engine.isCloud ? <Cloud size={20} className="sm:w-7 sm:h-7" /> : <Monitor size={20} className="sm:w-7 sm:h-7" />}
-                      </div>
-                      <div className="flex-1 text-left">
-                        <div className="font-black text-white text-sm sm:text-base uppercase tracking-tight">{engine.name}</div>
-                        <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-0.5 sm:mt-1">
-                          {engine.description}
-                          {engine.isCloud ? '' : ' • device-local only'}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Runtime</Label>
+                <div className="p-3 sm:p-6 rounded-xl sm:rounded-2xl border-2 bg-zinc-800 border-primary shadow-[0_2px_0_0_#4a6728] sm:shadow-[0_4px_0_0_#4a6728]">
+                  <div className="font-black text-white text-sm sm:text-base uppercase tracking-tight">Stockfish Cloud</div>
+                  <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">
+                    Server-side engine only. Local browser engines are hidden for now.
+                  </div>
                 </div>
               </div>
 
@@ -325,10 +303,10 @@ export default function EngineSettingsPage() {
                   <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Engine Output</Label>
                   {commandLogs.length > 0 && (
                     <button
-                      onClick={() => void engineStore.clearLogs()}
+                      onClick={() => void clearLogs()}
                       className="text-xs text-zinc-500 hover:text-white font-black uppercase tracking-widest transition-colors"
                     >
-                      Clear Shared Logs
+                      Clear
                     </button>
                   )}
                 </div>

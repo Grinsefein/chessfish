@@ -87,6 +87,15 @@ export const ENGINE_VERSIONS: Array<{ id: EngineVersion; label: string; descript
   { id: 'lc0', label: 'Lc0', description: 'Reserved cloud profile slot' },
 ];
 
+const LOCAL_SAFE_DEFAULTS = {
+  threads: 1,
+  hashSize: 32,
+  multiPv: 1,
+  maxDepth: 12,
+  maxTimePerMove: 2,
+  energySavingMode: true,
+};
+
 const defaultCloudRuntime: CloudEngineRuntime = {
   id: 'cloud',
   engine: 'stockfish',
@@ -222,6 +231,27 @@ const resetAnalysisState = {
   nodes: 0,
   time: 0,
   lines: [] as EngineLine[],
+};
+
+const getSafeLocalEngineSettings = (selectedEngine: EngineType, state: Pick<EngineState, 'threads' | 'hashSize' | 'multiPv' | 'maxDepth' | 'maxTimePerMove'>) => {
+  const hardwareThreads = typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number'
+    ? navigator.hardwareConcurrency
+    : 2;
+
+  const safeThreadCap = selectedEngine === 'local-legacy' ? 1 : Math.max(1, Math.min(2, Math.floor(hardwareThreads / 2) || 1));
+  const safeThreads = Math.max(1, Math.min(state.threads, safeThreadCap));
+  const safeHashSize = Math.max(16, Math.min(state.hashSize, selectedEngine === 'local-legacy' ? 16 : 64));
+  const safeMultiPv = Math.max(1, Math.min(state.multiPv, 2));
+  const safeDepth = Math.max(8, Math.min(state.maxDepth, 14));
+  const safeMoveTime = Math.max(1, Math.min(state.maxTimePerMove, 3));
+
+  return {
+    threads: safeThreads,
+    hashSize: safeHashSize,
+    multiPv: safeMultiPv,
+    maxDepth: safeDepth,
+    maxTimePerMove: safeMoveTime,
+  };
 };
 
 const applyRuntimeToState = (
@@ -422,6 +452,7 @@ export const useEngineStore = create<EngineState>()(
           worker: null,
           isAnalyzing: false,
           ...resetAnalysisState,
+          ...(engine === 'cloud' ? {} : LOCAL_SAFE_DEFAULTS),
         });
 
         if (engine === 'cloud') {
@@ -576,6 +607,7 @@ export const useEngineStore = create<EngineState>()(
           }
 
           let workerUrl = engineConfig.url || '/stockfish.js';
+          const safeLocalSettings = getSafeLocalEngineSettings(state.selectedEngine, state);
 
           if (engineConfig.id === 'local-wasm' && typeof SharedArrayBuffer === 'undefined') {
             workerUrl = 'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16-single.js';
@@ -601,10 +633,11 @@ export const useEngineStore = create<EngineState>()(
 
               if (message.includes('uciok')) {
                 const current = get();
-                worker.postMessage(`setoption name Hash value ${current.hashSize}`);
-                worker.postMessage(`setoption name Threads value ${current.threads}`);
-                worker.postMessage(`setoption name MultiPV value ${current.multiPv}`);
-                worker.postMessage(`setoption name Skill Level value ${current.skillLevel}`);
+                const safeCurrent = getSafeLocalEngineSettings(current.selectedEngine, current);
+                worker.postMessage(`setoption name Hash value ${safeCurrent.hashSize}`);
+                worker.postMessage(`setoption name Threads value ${safeCurrent.threads}`);
+                worker.postMessage(`setoption name MultiPV value ${safeCurrent.multiPv}`);
+                worker.postMessage(`setoption name Skill Level value ${Math.min(current.skillLevel, 12)}`);
                 worker.postMessage(`setoption name Use NNUE value ${current.useNNUE ? 'true' : 'false'}`);
                 worker.postMessage('isready');
               }
@@ -676,7 +709,15 @@ export const useEngineStore = create<EngineState>()(
 
           worker.postMessage('uci');
           get().addLog('Sent: uci');
-          set({ worker });
+          set({
+            worker,
+            threads: safeLocalSettings.threads,
+            hashSize: safeLocalSettings.hashSize,
+            multiPv: safeLocalSettings.multiPv,
+            maxDepth: safeLocalSettings.maxDepth,
+            maxTimePerMove: safeLocalSettings.maxTimePerMove,
+            energySavingMode: true,
+          });
         } catch (error) {
           set({
             status: 'error',
@@ -728,9 +769,15 @@ export const useEngineStore = create<EngineState>()(
       },
 
       startAnalysis: () => {
-        const { worker, status, selectedEngine } = get();
+        const { worker, status, selectedEngine, analysisMode, maxDepth, maxTimePerMove } = get();
         if (selectedEngine !== 'cloud' && worker && status === 'ready') {
-          worker.postMessage('go infinite');
+          const safeLocalSettings = getSafeLocalEngineSettings(selectedEngine, get());
+          worker.postMessage('stop');
+          if (analysisMode === 'depth') {
+            worker.postMessage(`go depth ${Math.min(maxDepth, safeLocalSettings.maxDepth)}`);
+          } else {
+            worker.postMessage(`go movetime ${Math.min(maxTimePerMove, safeLocalSettings.maxTimePerMove) * 1000}`);
+          }
           set({ isAnalyzing: true });
         }
       },
@@ -756,14 +803,15 @@ export const useEngineStore = create<EngineState>()(
         });
 
         if (selectedEngine !== 'cloud' && worker) {
+          const safeLocalSettings = getSafeLocalEngineSettings(selectedEngine, get());
           worker.postMessage('stop');
           worker.postMessage('ucinewgame');
           worker.postMessage(`position fen ${fen}`);
 
           if (analysisMode === 'depth') {
-            worker.postMessage(`go depth ${maxDepth}`);
+            worker.postMessage(`go depth ${Math.min(maxDepth, safeLocalSettings.maxDepth)}`);
           } else {
-            worker.postMessage(`go movetime ${maxTimePerMove * 1000}`);
+            worker.postMessage(`go movetime ${Math.min(maxTimePerMove, safeLocalSettings.maxTimePerMove) * 1000}`);
           }
         }
 
@@ -814,15 +862,23 @@ export const useEngineStore = create<EngineState>()(
         }
 
         if (status === 'ready' && worker) {
-          if (settings.hashSize !== undefined) worker.postMessage(`setoption name Hash value ${settings.hashSize}`);
-          if (settings.threads !== undefined) worker.postMessage(`setoption name Threads value ${settings.threads}`);
-          if (settings.multiPv !== undefined) worker.postMessage(`setoption name MultiPV value ${settings.multiPv}`);
+          const mergedState = { ...get(), ...settings };
+          const safeLocalSettings = getSafeLocalEngineSettings(selectedEngine, mergedState);
+          if (settings.hashSize !== undefined) worker.postMessage(`setoption name Hash value ${safeLocalSettings.hashSize}`);
+          if (settings.threads !== undefined) worker.postMessage(`setoption name Threads value ${safeLocalSettings.threads}`);
+          if (settings.multiPv !== undefined) worker.postMessage(`setoption name MultiPV value ${safeLocalSettings.multiPv}`);
           if (settings.skillLevel !== undefined) worker.postMessage(`setoption name Skill Level value ${settings.skillLevel}`);
           if (settings.useNNUE !== undefined) worker.postMessage(`setoption name Use NNUE value ${settings.useNNUE ? 'true' : 'false'}`);
           worker.postMessage('isready');
         }
 
-        set(settings);
+        const safeLocalSettings = getSafeLocalEngineSettings(selectedEngine, { ...get(), ...settings });
+        set({
+          ...settings,
+          threads: settings.threads !== undefined ? safeLocalSettings.threads : get().threads,
+          hashSize: settings.hashSize !== undefined ? safeLocalSettings.hashSize : get().hashSize,
+          multiPv: settings.multiPv !== undefined ? safeLocalSettings.multiPv : get().multiPv,
+        });
       },
 
       resetAnalysis: () => set({ ...resetAnalysisState }),

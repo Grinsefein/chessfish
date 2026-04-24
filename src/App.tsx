@@ -47,20 +47,25 @@ function ChessApp() {
   } = gameStore;
 
   const engineStore = useEngineStore();
+  const initEngineStore = useEngineStore((state) => state.init);
+  const bootEngine = useEngineStore((state) => state.bootEngine);
+  const analyzePosition = useEngineStore((state) => state.analyze);
+  const resetEngineAnalysis = useEngineStore((state) => state.resetAnalysis);
   const {
     status: engineStatus,
     currentEvaluation,
     bestMove: engineBestMove,
     lines: engineLines,
     isAnalyzing,
+    selectedEngine,
     activeView,
     setActiveView,
     drawArrows
   } = engineStore;
 
   useEffect(() => {
-    engineStore.init();
-  }, []);
+    initEngineStore();
+  }, [initEngineStore]);
 
   const { getDifficultyAdjustment } = usePerformanceScaling();
   
@@ -92,10 +97,10 @@ function ChessApp() {
 
   // Auto-boot engine on mount
   useEffect(() => {
-    if (engineStatus === 'offline') {
-      engineStore.bootEngine();
+    if (selectedEngine === 'cloud' && engineStatus === 'offline') {
+      bootEngine();
     }
-  }, [engineStatus, engineStore]);
+  }, [bootEngine, engineStatus, selectedEngine]);
 
   // Bot logic
   useEffect(() => {
@@ -116,27 +121,27 @@ function ChessApp() {
                 promotion: engineBestMove.length > 4 ? engineBestMove[4] : 'q'
               });
               if (move) {
-                engineStore.resetAnalysis();
+                resetEngineAnalysis();
               }
             }
           }, dynamicThinkTime); 
           return () => clearTimeout(timer);
         } else if (!isAnalyzing) {
           // Bot's turn but no best move yet, start analysis
-          engineStore.analyze(fen);
+          analyzePosition(fen);
         }
-      } else if (engineStatus === 'offline') {
-        engineStore.bootEngine();
+      } else if (selectedEngine === 'cloud' && engineStatus === 'offline') {
+        bootEngine();
       }
     }
-  }, [turn, activeView, isGameOver, engineBestMove, engineStatus, isAnalyzing, makeGameMove, selectedBot, getDifficultyAdjustment, engineStore, fen, previewIndex]);
+  }, [turn, activeView, isGameOver, engineBestMove, engineStatus, isAnalyzing, makeGameMove, selectedBot, getDifficultyAdjustment, analyzePosition, bootEngine, fen, previewIndex, resetEngineAnalysis, selectedEngine]);
 
   // Analysis mode - trigger engine when in analyze view
   useEffect(() => {
     if (activeView === 'analyze' && engineStatus === 'ready') {
-      engineStore.analyze(boardFen);
+      analyzePosition(boardFen);
     }
-  }, [activeView, engineStatus, engineStore, boardFen]);
+  }, [activeView, analyzePosition, boardFen, engineStatus]);
 
   // Handle batch PGN analysis
   const handlePgnUpload = async (pgn: string) => {
