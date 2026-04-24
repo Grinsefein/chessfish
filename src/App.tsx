@@ -300,10 +300,19 @@ function ChessApp() {
               setActiveTab('analyze');
             } else if (view === 'play') {
               setActiveTab('play');
+            } else if (view === 'upload') {
+              setActiveTab('upload');
             }
           }}
-          onOpenBotMatch={() => setShowBotMatchDialog(true)}
-          onOpenImport={() => setActiveTab('upload')}
+          onOpenBotMatch={() => {
+            setActiveView('play');
+            setActiveTab('play');
+            setShowBotMatchDialog(true);
+          }}
+          onOpenImport={() => {
+            setActiveView('upload');
+            setActiveTab('upload');
+          }}
           onOpenSettings={() => navigate('/settings')}
           extraItems={[
             { 
@@ -413,7 +422,22 @@ function ChessApp() {
                 </div>
               )}
               </div>
-              <EngineAnalysisBar />
+              <EngineAnalysisBar
+                onPrevMove={() => {
+                  if (previewIndex !== null && previewIndex > 0) {
+                    setPreviewIndex(previewIndex - 1);
+                  } else if (previewIndex === null && history.length > 0) {
+                    setPreviewIndex(history.length - 1);
+                  }
+                }}
+                onNextMove={() => {
+                  if (previewIndex !== null && previewIndex < history.length - 1) {
+                    setPreviewIndex(previewIndex + 1);
+                  } else if (previewIndex !== null) {
+                    setPreviewIndex(null);
+                  }
+                }}
+              />
             </div>
 
             {/* Move History or Game Review */}

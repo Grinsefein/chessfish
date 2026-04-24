@@ -113,33 +113,33 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
 
   if (!userId) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <Brain className="w-16 h-16 text-zinc-600 mb-4" />
-        <p className="text-zinc-400">Sign in to practice your mistakes</p>
+      <div className="flex flex-col items-center justify-center p-4 lg:p-8 text-center">
+        <Brain className="w-12 h-12 lg:w-16 lg:h-16 text-zinc-600 mb-4" />
+        <p className="text-zinc-400 text-sm lg:text-base">Sign in to practice your mistakes</p>
       </div>
     );
   }
 
   if (!puzzles || puzzles.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <Trophy className="w-16 h-16 text-teal-500 mb-4" />
-        <h3 className="text-xl font-bold text-white">All Caught Up!</h3>
-        <p className="text-zinc-400 max-w-md">
+      <div className="flex flex-col items-center justify-center p-4 lg:p-8 text-center space-y-3 lg:space-y-4">
+        <Trophy className="w-12 h-12 lg:w-16 lg:h-16 text-teal-500 mb-4" />
+        <h3 className="text-lg lg:text-xl font-bold text-white">All Caught Up!</h3>
+        <p className="text-zinc-400 max-w-md text-sm lg:text-base">
           No puzzles due for review. Analyze more games to generate puzzles from your mistakes.
         </p>
-        <div className="grid grid-cols-3 gap-4 w-full max-w-xs">
-          <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-            <div className="text-2xl font-bold text-white">{stats.total}</div>
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Total</div>
+        <div className="grid grid-cols-3 gap-2 lg:gap-4 w-full max-w-xs">
+          <div className="p-3 lg:p-4 bg-zinc-900 rounded-xl border border-zinc-800">
+            <div className="text-xl lg:text-2xl font-bold text-white">{stats.total}</div>
+            <div className="text-[10px] lg:text-xs text-zinc-500 uppercase tracking-wider">Total</div>
           </div>
-          <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-            <div className="text-2xl font-bold text-green-500">{stats.solved}</div>
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Solved</div>
+          <div className="p-3 lg:p-4 bg-zinc-900 rounded-xl border border-zinc-800">
+            <div className="text-xl lg:text-2xl font-bold text-green-500">{stats.solved}</div>
+            <div className="text-[10px] lg:text-xs text-zinc-500 uppercase tracking-wider">Solved</div>
           </div>
-          <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-            <div className="text-2xl font-bold text-primary">{stats.successRate}%</div>
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Rate</div>
+          <div className="p-3 lg:p-4 bg-zinc-900 rounded-xl border border-zinc-800">
+            <div className="text-xl lg:text-2xl font-bold text-primary">{stats.successRate}%</div>
+            <div className="text-[10px] lg:text-xs text-zinc-500 uppercase tracking-wider">Rate</div>
           </div>
         </div>
       </div>
@@ -151,21 +151,21 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-zinc-900 border-b border-zinc-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Target className="w-5 h-5 text-primary" />
+      <div className="flex items-center justify-between p-3 lg:p-4 bg-zinc-900 border-b border-zinc-800">
+        <div className="flex items-center gap-2 lg:gap-3">
+          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+            <Target className="w-4 h-4 lg:w-5 lg:h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-bold text-white">Practice Mistakes</h3>
-            <p className="text-xs text-zinc-500">
+            <h3 className="font-bold text-white text-sm lg:text-base">Practice Mistakes</h3>
+            <p className="text-[10px] lg:text-xs text-zinc-500">
               Puzzle {currentIndex + 1} of {puzzles.length}
             </p>
           </div>
         </div>
         
         <div className={cn(
-          "px-3 py-1.5 rounded-lg text-xs font-bold uppercase border",
+          "px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg text-[10px] lg:text-xs font-bold uppercase border shrink-0",
           getClassificationColor(currentPuzzle.classification)
         )}>
           {currentPuzzle.classification.replace('_', ' ')}
@@ -173,12 +173,12 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
       </div>
 
       {/* Board */}
-      <div className="flex-1 p-4 flex items-center justify-center bg-zinc-950">
+      <div className="flex-1 p-2 lg:p-4 flex items-center justify-center bg-zinc-950">
         <div className="w-full max-w-md aspect-square rounded-xl overflow-hidden border-4 border-zinc-800 shadow-2xl">
           <Chessboard
             position={game.fen()}
             onPieceDrop={onPieceDrop}
-            boardWidth={400}
+            boardWidth={window.innerWidth < 640 ? 300 : 400}
             customBoardStyle={{
               borderRadius: '0'
             }}
@@ -187,15 +187,15 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
       </div>
 
       {/* Status / Controls */}
-      <div className="p-4 bg-zinc-900 border-t border-zinc-800 space-y-4">
+      <div className="p-3 lg:p-4 bg-zinc-900 border-t border-zinc-800 space-y-3 lg:space-y-4">
         {status === 'playing' && (
           <>
-            <p className="text-sm text-zinc-400 text-center">
+            <p className="text-xs lg:text-sm text-zinc-400 text-center">
               Find the best move for {game.turn() === 'w' ? 'White' : 'Black'}
             </p>
             
             {showHint && (
-              <p className="text-sm text-primary text-center bg-primary/10 rounded-lg p-2">
+              <p className="text-xs lg:text-sm text-primary text-center bg-primary/10 rounded-lg p-2">
                 Look for {currentPuzzle.solutionMove.slice(0, 2)} → {currentPuzzle.solutionMove.slice(2, 4)}
               </p>
             )}
@@ -203,7 +203,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowHint(!showHint)}
-                className="flex-1 py-3 bg-zinc-800 text-zinc-400 rounded-xl font-bold text-sm hover:bg-zinc-700 hover:text-white transition-colors"
+                className="flex-1 py-2.5 lg:py-3 bg-zinc-800 text-zinc-400 rounded-xl font-bold text-xs lg:text-sm hover:bg-zinc-700 hover:text-white transition-colors"
               >
                 {showHint ? 'Hide Hint' : 'Show Hint'}
               </button>
@@ -212,38 +212,38 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
         )}
 
         {status === 'correct' && (
-          <div className="space-y-3">
+          <div className="space-y-2 lg:space-y-3">
             <div className="flex items-center justify-center gap-2 text-green-500">
-              <CheckCircle2 className="w-5 h-5" />
-              <span className="font-bold">Correct! Well done.</span>
+              <CheckCircle2 className="w-4 h-4 lg:w-5 lg:h-5" />
+              <span className="font-bold text-sm lg:text-base">Correct! Well done.</span>
             </div>
             <button
               onClick={handleNext}
-              className="w-full py-3 bg-green-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-green-600 transition-colors"
+              className="w-full py-2.5 lg:py-3 bg-green-500 text-white rounded-xl font-bold text-xs lg:text-sm flex items-center justify-center gap-2 hover:bg-green-600 transition-colors"
             >
               Next Puzzle
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3 h-3 lg:w-4 lg:h-4" />
             </button>
           </div>
         )}
 
         {status === 'incorrect' && (
-          <div className="space-y-3">
+          <div className="space-y-2 lg:space-y-3">
             <div className="flex items-center justify-center gap-2 text-red-500">
-              <XCircle className="w-5 h-5" />
-              <span className="font-bold">Not quite right</span>
+              <XCircle className="w-4 h-4 lg:w-5 lg:h-5" />
+              <span className="font-bold text-sm lg:text-base">Not quite right</span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleRetry}
-                className="flex-1 py-3 bg-zinc-800 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-zinc-700 transition-colors"
+                className="flex-1 py-2.5 lg:py-3 bg-zinc-800 text-white rounded-xl font-bold text-xs lg:text-sm flex items-center justify-center gap-2 hover:bg-zinc-700 transition-colors"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-3 h-3 lg:w-4 lg:h-4" />
                 Try Again
               </button>
               <button
                 onClick={handleNext}
-                className="flex-1 py-3 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl font-bold text-sm hover:bg-red-500/30 transition-colors"
+                className="flex-1 py-2.5 lg:py-3 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl font-bold text-xs lg:text-sm hover:bg-red-500/30 transition-colors"
               >
                 Skip
               </button>
@@ -252,12 +252,12 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
         )}
 
         {/* Progress */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 lg:gap-2">
           {puzzles.map((_, i) => (
             <div
               key={i}
               className={cn(
-                "h-1.5 flex-1 rounded-full transition-colors",
+                "h-1 lg:h-1.5 flex-1 rounded-full transition-colors",
                 i < currentIndex ? "bg-green-500" :
                 i === currentIndex ? "bg-primary" : "bg-zinc-800"
               )}

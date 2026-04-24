@@ -102,7 +102,7 @@ export const PGNUpload: React.FC<PGNUploadProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4">
+    <div className="w-full max-w-2xl mx-auto space-y-3 lg:space-y-4">
       {/* Drag & Drop Zone */}
       <div
         onDragOver={handleDragOver}
@@ -110,7 +110,7 @@ export const PGNUpload: React.FC<PGNUploadProps> = ({
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
         className={cn(
-          "relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all",
+          "relative border-2 border-dashed rounded-2xl p-4 lg:p-8 text-center cursor-pointer transition-all",
           isDragging 
             ? "border-primary bg-primary/5 scale-[1.02]" 
             : "border-zinc-700 hover:border-zinc-600 hover:bg-zinc-900/50"
@@ -124,30 +124,30 @@ export const PGNUpload: React.FC<PGNUploadProps> = ({
           className="hidden"
         />
         
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-2 lg:gap-3">
           <div className={cn(
-            "w-16 h-16 rounded-2xl flex items-center justify-center transition-colors",
+            "w-12 h-12 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center transition-colors",
             isDragging ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400"
           )}>
             {isAnalyzing ? (
-              <Loader2 className="w-8 h-8 animate-spin" />
+              <Loader2 className="w-6 h-6 lg:w-8 lg:h-8 animate-spin" />
             ) : (
-              <FileUp className="w-8 h-8" />
+              <FileUp className="w-6 h-6 lg:w-8 lg:h-8" />
             )}
           </div>
           
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-white">
+          <div className="space-y-1 text-center px-2">
+            <p className="text-xs lg:text-sm font-bold text-white">
               {isAnalyzing ? 'Analyzing game...' : 'Drop PGN file here or click to browse'}
             </p>
-            <p className="text-xs text-zinc-500">
+            <p className="text-[10px] lg:text-xs text-zinc-500">
               Supports .pgn and .txt files
             </p>
           </div>
           
           {isAnalyzing && progress && (
             <div className="w-full max-w-xs">
-              <div className="flex justify-between text-xs text-zinc-400 mb-1">
+              <div className="flex justify-between text-[10px] lg:text-xs text-zinc-400 mb-1">
                 <span>Analyzing move {progress.current} of {progress.total}</span>
                 <span>{Math.round((progress.current / progress.total) * 100)}%</span>
               </div>
@@ -168,14 +168,14 @@ export const PGNUpload: React.FC<PGNUploadProps> = ({
           <div className="w-full border-t border-zinc-800" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-zinc-950 px-3 text-xs font-bold text-zinc-500 uppercase">
+          <span className="bg-zinc-950 px-3 text-[10px] lg:text-xs font-bold text-zinc-500 uppercase">
             Or paste PGN
           </span>
         </div>
       </div>
 
       {/* Text Input */}
-      <div className="space-y-3">
+      <div className="space-y-2 lg:space-y-3">
         <textarea
           value={pgnText}
           onChange={(e) => {
@@ -183,21 +183,21 @@ export const PGNUpload: React.FC<PGNUploadProps> = ({
             setError(null);
           }}
           placeholder="Paste PGN here...&#10;[Event &#34;...&#34;]&#10;1. e4 e5 2. Nf3 ..."
-          className="w-full h-48 bg-zinc-900 border-2 border-zinc-800 rounded-xl p-4 text-sm font-mono text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-primary resize-none"
+          className="w-full h-32 lg:h-48 bg-zinc-900 border-2 border-zinc-800 rounded-xl p-3 lg:p-4 text-xs lg:text-sm font-mono text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-primary resize-none"
         />
         
         {error && (
-          <div className="flex items-center gap-2 text-red-500 text-sm">
-            <AlertCircle className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-red-500 text-xs lg:text-sm">
+            <AlertCircle className="w-3 h-3 lg:w-4 lg:h-4" />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 lg:gap-3">
           <button
             onClick={handleSubmit}
             disabled={isAnalyzing || !pgnText.trim()}
-            className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+            className="flex-1 py-2.5 lg:py-3 bg-primary text-white rounded-xl font-bold text-xs lg:text-sm uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
           >
             {isAnalyzing ? 'Analyzing...' : 'Analyze Game'}
           </button>
@@ -205,7 +205,7 @@ export const PGNUpload: React.FC<PGNUploadProps> = ({
           <button
             onClick={handlePasteExample}
             disabled={isAnalyzing}
-            className="px-4 py-3 bg-zinc-800 text-zinc-400 rounded-xl font-bold text-sm hover:bg-zinc-700 hover:text-white transition-colors"
+            className="px-3 lg:px-4 py-2.5 lg:py-3 bg-zinc-800 text-zinc-400 rounded-xl font-bold text-xs lg:text-sm hover:bg-zinc-700 hover:text-white transition-colors"
           >
             Example
           </button>

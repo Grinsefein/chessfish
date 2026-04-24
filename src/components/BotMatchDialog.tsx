@@ -54,17 +54,17 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 gap-0 rounded-2xl border-2 border-zinc-800 bg-zinc-950 shadow-[0_8px_0_0_#09090b] overflow-hidden">
+      <DialogContent showCloseButton={false} className="max-w-2xl w-[95vw] p-0 gap-0 rounded-2xl border-2 border-zinc-800 bg-zinc-950 shadow-[0_8px_0_0_#09090b] overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 pb-4 border-b-2 border-2 border-zinc-800 bg-zinc-900">
+        <DialogHeader className="p-4 lg:p-6 pb-3 lg:pb-4 border-b-2 border-2 border-zinc-800 bg-zinc-900">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center">
-                <Swords className="w-6 h-6 text-primary" />
+            <div className="flex items-center gap-3 lg:gap-4">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-zinc-800 flex items-center justify-center">
+                <Swords className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold text-white tracking-tight">Challenge Bot</DialogTitle>
-                <DialogDescription className="text-zinc-500 font-medium text-sm mt-0.5">
+                <DialogTitle className="text-lg lg:text-xl font-bold text-white tracking-tight">Challenge Bot</DialogTitle>
+                <DialogDescription className="text-zinc-500 font-medium text-xs lg:text-sm mt-0.5">
                   Select your opponent and match conditions
                 </DialogDescription>
               </div>
@@ -75,7 +75,7 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
           </div>
         </DialogHeader>
 
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
           
           {/* Bot Selection */}
           <div className="space-y-3">
@@ -84,44 +84,44 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
               Opponent Profile
             </h3>
             
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 lg:gap-3">
               {BOTS.map((bot) => (
                 <button
                   key={bot.id}
                   onClick={() => setSelectedBot(bot)}
                   className={cn(
-                    "p-3 rounded-xl border-2 transition-all duration-200 text-center relative",
+                    "p-2 lg:p-3 rounded-xl border-2 transition-all duration-200 text-center relative",
                     selectedBot.id === bot.id
                       ? "bg-zinc-900 border-primary"
                       : "bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900"
                   )}
                 >
-                  <img src={bot.avatar} alt={bot.name} className="w-10 h-10 mx-auto mb-2 rounded-full border-2 border-zinc-700" />
-                  <div className="text-xs font-bold text-white mb-0.5 uppercase tracking-tight">{bot.name}</div>
-                  <div className="text-[10px] font-bold text-zinc-400">{bot.elo} ELO</div>
+                  <img src={bot.avatar} alt={bot.name} className="w-8 h-8 lg:w-10 lg:h-10 mx-auto mb-1.5 lg:mb-2 rounded-full border-2 border-zinc-700" />
+                  <div className="text-[10px] lg:text-xs font-bold text-white mb-0.5 uppercase tracking-tight truncate">{bot.name}</div>
+                  <div className="text-[9px] lg:text-[10px] font-bold text-zinc-400">{bot.elo} ELO</div>
                 </button>
               ))}
             </div>
 
             {/* Selected Bot Info Card */}
-            <div className="p-4 rounded-xl bg-zinc-900 border-2 border-zinc-800">
-              <div className="flex items-start gap-4">
-                <img src={selectedBot.avatar} alt={selectedBot.name} className="w-14 h-14 rounded-full border-2 border-zinc-700 bg-zinc-800" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <span className="font-bold text-white text-base">{selectedBot.name}</span>
-                    <span className="text-[9px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold uppercase tracking-widest">
+            <div className="p-3 lg:p-4 rounded-xl bg-zinc-900 border-2 border-zinc-800">
+              <div className="flex items-start gap-3 lg:gap-4">
+                <img src={selectedBot.avatar} alt={selectedBot.name} className="w-12 h-12 lg:w-14 lg:h-14 rounded-full border-2 border-zinc-700 bg-zinc-800 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 lg:gap-3 mb-1 flex-wrap">
+                    <span className="font-bold text-white text-sm lg:text-base">{selectedBot.name}</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold uppercase tracking-widest shrink-0">
                       {selectedBot.elo} ELO
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-400 font-medium leading-relaxed">{selectedBot.description}</p>
+                  <p className="text-[11px] lg:text-xs text-zinc-400 font-medium leading-relaxed line-clamp-2">{selectedBot.description}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Time Control */}
-          <div className="space-y-4 pt-2 border-t-2 border-2 border-zinc-800">
+          <div className="space-y-3 lg:space-y-4 pt-2 border-t-2 border-2 border-zinc-800">
             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
               <Clock size={14} />
               Time Control
@@ -140,7 +140,7 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
                 max={60}
                 step={1}
               />
-              <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase">
+              <div className="flex justify-between text-[8px] lg:text-[9px] font-bold text-zinc-500 uppercase">
                 <span>Bullet (1m)</span>
                 <span>Blitz (3-5m)</span>
                 <span>Rapid (10m)</span>
@@ -164,9 +164,9 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
             </div>
 
             {/* Time Display */}
-            <div className="p-3 rounded-xl bg-zinc-900 border-2 border-zinc-800 text-center mt-4">
+            <div className="p-3 lg:p-3 rounded-xl bg-zinc-900 border-2 border-zinc-800 text-center mt-2 lg:mt-4">
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Selected Time Control</span>
-              <div className="text-xl font-bold text-white mt-0.5">
+              <div className="text-lg lg:text-xl font-bold text-white mt-0.5">
                 {getTimeDisplay(minutes, increment)}
               </div>
             </div>

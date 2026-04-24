@@ -111,7 +111,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             <p className="px-4 text-[10px] font-black text-zinc-700 uppercase tracking-[0.2em] mb-4">Tools</p>
             <NavItem icon={BookOpen} label="Openings" view="explorer" />
             <NavItem icon={History} label="History" view="library" />
-            <NavItem icon={Download} label="Import" onClick={onOpenImport} />
+            <NavItem icon={Download} label="Import" view="upload" onClick={onOpenImport} />
             {extraItems.map(item => (
               <button
                 key={item.id}
@@ -194,9 +194,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           </button>
           <button
             onClick={onOpenImport}
-            className="flex flex-col items-center justify-center p-2 rounded-lg transition-all min-w-[64px] text-zinc-500 hover:bg-zinc-900/50 touch-manipulation"
+            className={cn(
+              "flex flex-col items-center justify-center p-2 rounded-lg transition-all min-w-[64px] touch-manipulation",
+              activeView === 'upload' ? "text-primary bg-zinc-900" : "text-zinc-500 hover:bg-zinc-900/50"
+            )}
           >
-            <Download size={20} className="text-zinc-600" />
+            <Download size={20} className={cn(activeView === 'upload' ? "text-primary" : "text-zinc-600")} />
             <span className="text-[9px] font-black uppercase tracking-wider mt-1">Import</span>
           </button>
           {extraItems.map(item => (
