@@ -143,6 +143,17 @@ function ChessApp() {
     }
   }, [activeView, analyzePosition, boardFen, engineStatus]);
 
+  // Play mode - analyze position to show recommended moves (except when bot is thinking)
+  useEffect(() => {
+    if (activeView === 'play' && engineStatus === 'ready' && !isGameOver && previewIndex === null) {
+      // Don't re-analyze if bot is about to move (avoid conflict with bot logic)
+      if (turn === 'w' && !isAnalyzing) {
+        // White's turn (player) - analyze to show recommended move
+        analyzePosition(boardFen);
+      }
+    }
+  }, [activeView, turn, engineStatus, isGameOver, previewIndex, isAnalyzing, analyzePosition, boardFen]);
+
   // Handle batch PGN analysis
   const handlePgnUpload = async (pgn: string) => {
     setIsBatchAnalyzing(true);
@@ -257,25 +268,33 @@ function ChessApp() {
       }
     }
 
-    // Generate arrows for engine lines - react-chessboard expects array of [from, to] tuples
+    // Generate arrows for engine lines - react-chessboard expects array of [from, to, color] tuples
     const arrows: [string, string, string][] = [];
-    if (drawArrows && engineLines.length > 0 && activeView === 'analyze') {
-      // Only show arrow for best move (first line, first move) to reduce clutter
+    if (drawArrows && engineLines.length > 0) {
+      // Color based on whose turn it is: white = blue, black = red/orange
+      const isWhiteToMove = game.turn() === 'w';
+      const primaryColor = isWhiteToMove
+        ? 'rgba(59, 130, 246, 0.85)'   // Blue for white's best move
+        : 'rgba(239, 68, 68, 0.85)';   // Red for black's best move
+
+      // Only show arrow for best move (first line) to reduce clutter
       const bestLine = engineLines[0];
       if (bestLine?.bestMove && bestLine.bestMove.length >= 4) {
         const from = bestLine.bestMove.substring(0, 2);
         const to = bestLine.bestMove.substring(2, 4);
-        arrows.push([from, to, 'rgba(34, 197, 94, 0.8)']); // Green for best move
+        arrows.push([from, to, primaryColor]);
       }
 
-      // Optional: Show secondary arrows for alternative lines (different colors)
-      engineLines.slice(1, 2).forEach((line) => {
-        if (line?.bestMove && line.bestMove.length >= 4) {
-          const from = line.bestMove.substring(0, 2);
-          const to = line.bestMove.substring(2, 4);
-          arrows.push([from, to, 'rgba(234, 179, 8, 0.6)']); // Yellow for alternatives
-        }
-      });
+      // Show one alternative line with different color
+      const altLine = engineLines[1];
+      if (altLine?.bestMove && altLine.bestMove.length >= 4) {
+        const from = altLine.bestMove.substring(0, 2);
+        const to = altLine.bestMove.substring(2, 4);
+        const altColor = isWhiteToMove
+          ? 'rgba(96, 165, 250, 0.5)'    // Lighter blue
+          : 'rgba(248, 113, 113, 0.5)';  // Lighter red
+        arrows.push([from, to, altColor]);
+      }
     }
 
     return {
@@ -336,7 +355,7 @@ function ChessApp() {
         setSelectedSquare(square);
       }
     };
-  }, [boardFen, turn, previewIndex, activeView, lastMove, selectedSquare, game, makeGameMove]);
+  }, [boardFen, turn, previewIndex, activeView, lastMove, selectedSquare, game, makeGameMove, engineLines, drawArrows]);
 
   const evalPercentage = useMemo(() => {
     if (engineLines[0]?.isMate) {
