@@ -93,7 +93,7 @@ export default function EngineSettingsPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full">
+      <div className="flex-1 flex overflow-hidden max-w-[1400px] mx-auto w-full">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
@@ -201,10 +201,10 @@ export default function EngineSettingsPage() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-12 custom-scrollbar space-y-4 sm:space-y-8 lg:space-y-10 bg-zinc-900">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12 xl:p-16 custom-scrollbar space-y-6 sm:space-y-8 lg:space-y-12 bg-zinc-900">
             
             {/* Configuration Tab */}
-            <TabsContent value="config" className="m-0 space-y-4 sm:space-y-8 lg:space-y-10">
+            <TabsContent value="config" className="m-0 space-y-6 sm:space-y-8 lg:space-y-12">
               <div className="space-y-2 sm:space-y-4">
                 <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Engine Version</Label>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-4">
@@ -226,8 +226,8 @@ export default function EngineSettingsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6 lg:gap-8">
-                <div className="p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-3 sm:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-10">
+                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Threads</Label>
                     <span className="text-base font-black text-primary bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">{threads}</span>
@@ -235,7 +235,7 @@ export default function EngineSettingsPage() {
                   <Slider value={[threads]} onValueChange={(v) => setEngineSettings({ threads: v[0] })} min={1} max={8} step={1} />
                   <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">CPU threads for engine calculation</div>
                 </div>
-                <div className="p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-3 sm:space-y-6">
+                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Hash Memory</Label>
                     <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{hashSize}MB</span>
@@ -245,7 +245,7 @@ export default function EngineSettingsPage() {
                 </div>
               </div>
 
-              <div className="p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 flex items-center justify-between shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b]">
+              <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 flex items-center justify-between shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b]">
                 <div>
                   <div className="text-sm sm:text-base font-black text-white uppercase tracking-tight">Energy Saving Mode</div>
                   <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-0.5 sm:mt-1">Reduce CPU usage when idle</div>
@@ -253,7 +253,7 @@ export default function EngineSettingsPage() {
                 <Switch checked={energySavingMode} onCheckedChange={setEnergySavingMode} />
               </div>
 
-              <div className="p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-3 sm:space-y-6">
+              <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Multi-PV Lines</Label>
                   <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{engineStore.multiPv}</span>
@@ -262,14 +262,14 @@ export default function EngineSettingsPage() {
                 <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Number of principal variations to calculate</div>
               </div>
 
-              <div className="space-y-2 sm:space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Analysis Mode</Label>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-4">
-                  <button onClick={() => setAnalysisMode('depth')} className={cn("p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] min-h-[60px] sm:min-h-[100px]", analysisMode === 'depth' ? 'border-primary bg-primary/10 translate-y-[-1px] sm:translate-y-[-2px]' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600')}>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                  <button onClick={() => setAnalysisMode('depth')} className={cn("p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] min-h-[80px] sm:min-h-[120px]", analysisMode === 'depth' ? 'border-primary bg-primary/10 translate-y-[-1px] sm:translate-y-[-2px]' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600')}>
                     <div className="text-base sm:text-xl font-black text-white uppercase tracking-tight">Depth</div>
                     <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1 sm:mt-2">Fixed search depth</div>
                   </button>
-                  <button onClick={() => setAnalysisMode('time')} className={cn("p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] min-h-[60px] sm:min-h-[100px]", analysisMode === 'time' ? 'border-primary bg-primary/10 translate-y-[-1px] sm:translate-y-[-2px]' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600')}>
+                  <button onClick={() => setAnalysisMode('time')} className={cn("p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] min-h-[80px] sm:min-h-[120px]", analysisMode === 'time' ? 'border-primary bg-primary/10 translate-y-[-1px] sm:translate-y-[-2px]' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600')}>
                     <div className="text-base sm:text-xl font-black text-white uppercase tracking-tight">Time</div>
                     <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1 sm:mt-2">Fixed time limit</div>
                   </button>
@@ -277,7 +277,7 @@ export default function EngineSettingsPage() {
               </div>
 
               {analysisMode === 'depth' ? (
-                <div className="p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-3 sm:space-y-6">
+                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Max Search Depth</Label>
                     <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{maxDepth}</span>
@@ -285,7 +285,7 @@ export default function EngineSettingsPage() {
                   <Slider value={[maxDepth]} onValueChange={(v) => setMaxDepth(v[0])} min={10} max={30} step={1} />
                 </div>
               ) : (
-                <div className="p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-3 sm:space-y-6">
+                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Max Time per Move (s)</Label>
                     <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{maxTimePerMove}s</span>
@@ -296,7 +296,7 @@ export default function EngineSettingsPage() {
             </TabsContent>
 
             {/* Backend Tab */}
-            <TabsContent value="backend" className="m-0 space-y-4 sm:space-y-8 lg:space-y-10">
+            <TabsContent value="backend" className="m-0 space-y-6 sm:space-y-8 lg:space-y-12">
               <div className={cn(
                 "p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between relative overflow-hidden gap-2 sm:gap-4",
                 status === 'ready' ? 'bg-green-500/10 border-green-500/50' :

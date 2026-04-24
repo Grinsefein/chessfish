@@ -2,6 +2,7 @@ import React from 'react';
 import { useEngineStore } from '@/store/engineStore';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useThrottledValue } from '@/hooks/useThrottledValue';
 import { 
   Play, 
   Pause, 
@@ -41,13 +42,22 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
     cloudRuntime
   } = engineStore;
 
+  // Throttle values to reduce UI jitter (10fps max)
+  const throttledNps = useThrottledValue(nps, 100);
+  const throttledNodes = useThrottledValue(nodes, 100);
+  const throttledTime = useThrottledValue(time, 100);
+  const throttledDepth = useThrottledValue(depth, 100);
+
   const engineBadge = selectedEngine === 'cloud'
     ? `${cloudRuntime.engineVersion.toUpperCase()} CLOUD`
     : `${selectedEngineVersion.toUpperCase()} LOCAL`;
 
-  // Format big numbers
+  // Format big numbers with rounding to reduce visual changes
   const formatNumber = (num: number) => {
+    // Round to reduce jitter
+    if (num >= 10000000) return (Math.round(num / 1000000)).toString() + 'M';
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 10000) return (Math.round(num / 1000)).toString() + 'k';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
     return num.toString();
   };
@@ -85,21 +95,21 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
             <Activity size={12} className="text-zinc-600 group-hover:text-primary transition-colors" />
             <div className="flex flex-col">
               <span className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-600">NPS</span>
-              <span className="text-[10px] font-bold text-zinc-400 tabular-nums">{formatNumber(nps)}</span>
+              <span className="text-[10px] font-bold text-zinc-400 tabular-nums transition-all duration-300">{formatNumber(throttledNps)}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 group">
             <Layers size={12} className="text-zinc-600 group-hover:text-primary transition-colors" />
             <div className="flex flex-col">
               <span className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-600">Nodes</span>
-              <span className="text-[10px] font-bold text-zinc-400 tabular-nums">{formatNumber(nodes)}</span>
+              <span className="text-[10px] font-bold text-zinc-400 tabular-nums transition-all duration-300">{formatNumber(throttledNodes)}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 group">
             <Timer size={12} className="text-zinc-600 group-hover:text-primary transition-colors" />
             <div className="flex flex-col">
               <span className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-600">Time</span>
-              <span className="text-[10px] font-bold text-zinc-400 tabular-nums">{(time / 1000).toFixed(1)}s</span>
+              <span className="text-[10px] font-bold text-zinc-400 tabular-nums transition-all duration-300">{(throttledTime / 1000).toFixed(1)}s</span>
             </div>
           </div>
         </div>
@@ -172,7 +182,7 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
           </div>
           <div className="flex flex-col shrink-0 border-l-2 border-zinc-800 pl-3 lg:pl-5">
             <span className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-0.5">Depth</span>
-            <span className="text-xs lg:text-lg font-black text-primary leading-none tabular-nums">{depth}</span>
+            <span className="text-xs lg:text-lg font-black text-primary leading-none tabular-nums transition-all duration-300">{throttledDepth}</span>
           </div>
         </div>
       </div>

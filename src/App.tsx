@@ -257,17 +257,23 @@ function ChessApp() {
       }
     }
 
-    // Generate arrows for engine lines
-    const arrows: string[] = [];
+    // Generate arrows for engine lines - react-chessboard expects array of [from, to] tuples
+    const arrows: [string, string, string][] = [];
     if (drawArrows && engineLines.length > 0 && activeView === 'analyze') {
-      engineLines.slice(0, 3).forEach((line) => {
-        if (line.pv && line.bestMove) {
-          const moves = line.pv.split(' ');
-          for (let i = 0; i < Math.min(moves.length - 1, 3); i++) {
-            const from = moves[i].substring(0, 2);
-            const to = moves[i].substring(2, 4);
-            arrows.push(`${from}${to}`);
-          }
+      // Only show arrow for best move (first line, first move) to reduce clutter
+      const bestLine = engineLines[0];
+      if (bestLine?.bestMove && bestLine.bestMove.length >= 4) {
+        const from = bestLine.bestMove.substring(0, 2);
+        const to = bestLine.bestMove.substring(2, 4);
+        arrows.push([from, to, 'rgba(34, 197, 94, 0.8)']); // Green for best move
+      }
+
+      // Optional: Show secondary arrows for alternative lines (different colors)
+      engineLines.slice(1, 2).forEach((line) => {
+        if (line?.bestMove && line.bestMove.length >= 4) {
+          const from = line.bestMove.substring(0, 2);
+          const to = line.bestMove.substring(2, 4);
+          arrows.push([from, to, 'rgba(234, 179, 8, 0.6)']); // Yellow for alternatives
         }
       });
     }

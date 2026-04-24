@@ -281,6 +281,53 @@ const registerCloudListeners = (
 ) => {
   socket.removeAllListeners();
 
+  // Throttled state updates for performance
+  let pendingInfoUpdate: { nps?: number; nodes?: number; time?: number; lines?: EngineLine[]; depth?: number } | null = null;
+  let infoTimeout: NodeJS.Timeout | null = null;
+  const INFO_THROTTLE_MS = 100;
+
+  const flushInfoUpdate = () => {
+    if (!pendingInfoUpdate) return;
+    const update = pendingInfoUpdate;
+    pendingInfoUpdate = null;
+
+    const state: Partial<EngineState> = {};
+    if (update.nps !== undefined) state.nps = update.nps;
+    if (update.nodes !== undefined) state.nodes = update.nodes;
+    if (update.time !== undefined) state.time = update.time;
+
+    if (update.lines) {
+      update.lines.forEach((line, idx) => {
+        get().updateLine(idx, {
+          evaluation: line.evaluation,
+          isMate: line.isMate || false,
+          bestMove: line.bestMove,
+          pv: line.pv,
+          depth: update.depth || line.depth,
+        });
+      });
+    }
+
+    if (Object.keys(state).length > 0) {
+      set(state);
+    }
+  };
+
+  const scheduleInfoUpdate = (info: { nps?: number; nodes?: number; time?: number; lines?: EngineLine[]; depth?: number }) => {
+    pendingInfoUpdate = { ...pendingInfoUpdate, ...info };
+    if (info.lines) {
+      pendingInfoUpdate.lines = info.lines;
+      pendingInfoUpdate.depth = info.depth;
+    }
+
+    if (!infoTimeout) {
+      infoTimeout = setTimeout(() => {
+        infoTimeout = null;
+        flushInfoUpdate();
+      }, INFO_THROTTLE_MS);
+    }
+  };
+
   socket.on('connect', () => {
     const { selectedEngine } = get();
     if (selectedEngine === 'cloud') {
@@ -306,21 +353,7 @@ const registerCloudListeners = (
   });
 
   socket.on('engine:info', (info: { nps?: number; nodes?: number; time?: number; lines?: EngineLine[]; depth?: number }) => {
-    if (info.nps !== undefined) set({ nps: info.nps });
-    if (info.nodes !== undefined) set({ nodes: info.nodes });
-    if (info.time !== undefined) set({ time: info.time });
-
-    if (info.lines) {
-      info.lines.forEach((line, idx) => {
-        get().updateLine(idx, {
-          evaluation: line.evaluation,
-          isMate: line.isMate || false,
-          bestMove: line.bestMove,
-          pv: line.pv,
-          depth: info.depth || line.depth,
-        });
-      });
-    }
+    scheduleInfoUpdate(info);
   });
 
   socket.on('engine:result', (result: { error?: string; bestMove?: string | null; lines?: EngineLine[]; depth?: number }) => {
