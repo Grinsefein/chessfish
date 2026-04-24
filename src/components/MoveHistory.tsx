@@ -1,6 +1,5 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { 
   Download, 
@@ -42,32 +41,32 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
   }
 
   return (
-    <div className="w-full lg:w-80 flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl h-[580px]">
+    <div className="w-full flex flex-col bg-zinc-900 h-full">
       {/* Game Info Header */}
-      <div className="p-4 border-b border-zinc-800 bg-zinc-950/50">
+      <div className="p-4 border-b-2 border-2 border-zinc-800 bg-zinc-950">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded bg-zinc-800 flex items-center justify-center">
-            <span className="text-xs">🤖</span>
+          <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b]">
+            <span className="text-sm">🤖</span>
           </div>
-          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Play vs Computer</span>
+          <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Vs Computer</span>
         </div>
       </div>
 
       {/* Move List */}
-      <ScrollArea className="flex-1 px-1 py-2">
-        <div className="space-y-0.5">
+      <ScrollArea className="flex-1 px-1 py-2 bg-zinc-900">
+        <div className="space-y-1">
           {movePairs.map((pair) => (
-            <div key={pair.number} className="flex items-center text-xs">
-              <div className="w-10 text-center font-bold text-zinc-600 py-1.5 bg-zinc-950/30">
+            <div key={pair.number} className="flex items-center text-[13px]">
+              <div className="w-10 text-center font-black text-zinc-600 py-2">
                 {pair.number}.
               </div>
               
               <button
                 onClick={() => onPreviewMove(pair.white.index)}
                 className={cn(
-                  "flex-1 py-1.5 px-3 rounded-md transition-all text-left font-bold",
+                  "flex-1 py-2 px-3 rounded-lg transition-all text-left font-black uppercase tracking-tight",
                   previewIndex === pair.white.index 
-                    ? "bg-zinc-800 text-white" 
+                    ? "bg-zinc-800 text-white border-b-2 border-zinc-700"
                     : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
                 )}
               >
@@ -78,9 +77,9 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
                 <button
                   onClick={() => onPreviewMove(pair.black!.index)}
                   className={cn(
-                    "flex-1 py-1.5 px-3 rounded-md transition-all text-left font-bold",
+                    "flex-1 py-2 px-3 rounded-lg transition-all text-left font-black uppercase tracking-tight",
                     previewIndex === pair.black.index 
-                      ? "bg-zinc-800 text-white" 
+                      ? "bg-zinc-800 text-white border-b-2 border-zinc-700"
                       : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
                   )}
                 >
@@ -93,38 +92,38 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
           ))}
 
           {history.length === 0 && (
-            <div className="py-20 text-center opacity-10">
-              <p className="text-[9px] font-bold uppercase tracking-widest">Awaiting Moves</p>
+            <div className="py-20 text-center opacity-20">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Awaiting Moves</p>
             </div>
           )}
         </div>
       </ScrollArea>
 
       {/* Utility Row */}
-      <div className="grid grid-cols-3 border-t border-zinc-800 bg-zinc-950/30">
-        <button onClick={onResign} className="flex flex-col items-center justify-center py-3 hover:bg-zinc-800 transition-colors">
-          <Flag size={18} className="text-zinc-600" />
+      <div className="grid grid-cols-3 border-t-2 border-2 border-zinc-800 bg-zinc-950">
+        <button onClick={onResign} className="flex flex-col items-center justify-center py-4 hover:bg-zinc-900 transition-colors border-r-2 border-2 border-zinc-800 group">
+          <Flag size={20} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
         </button>
-        <button onClick={onUndo} className="flex flex-col items-center justify-center py-3 border-l border-r border-zinc-800 hover:bg-zinc-800 transition-colors">
-          <RotateCcw size={18} className="text-zinc-600" />
+        <button onClick={onUndo} className="flex flex-col items-center justify-center py-4 hover:bg-zinc-900 transition-colors border-r-2 border-2 border-zinc-800 group">
+          <RotateCcw size={20} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
         </button>
-        <button className="flex flex-col items-center justify-center py-3 hover:bg-zinc-800 transition-colors">
-          <Lightbulb size={18} className="text-zinc-600" />
+        <button className="flex flex-col items-center justify-center py-4 hover:bg-zinc-900 transition-colors group">
+          <Lightbulb size={20} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
         </button>
       </div>
 
       {/* Bottom Bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800 bg-zinc-950">
-        <div className="flex items-center gap-5">
-          <button onClick={onExportPgn} className="text-zinc-600 hover:text-zinc-300">
-            <Download size={16} />
+      <div className="flex items-center justify-between px-6 py-4 border-t-2 border-2 border-zinc-800 bg-zinc-950">
+        <div className="flex items-center gap-6">
+          <button onClick={onExportPgn} className="text-zinc-500 hover:text-white transition-colors">
+            <Download size={18} />
           </button>
-          <button onClick={onExportFen} className="text-zinc-600 hover:text-zinc-300">
-            <Share2 size={16} />
+          <button onClick={onExportFen} className="text-zinc-500 hover:text-white transition-colors">
+            <Share2 size={18} />
           </button>
         </div>
-        <button onClick={onOpenSettings} className="text-zinc-600 hover:text-zinc-300">
-          <Settings size={16} />
+        <button onClick={onOpenSettings} className="text-zinc-500 hover:text-white transition-colors">
+          <Settings size={18} />
         </button>
       </div>
     </div>

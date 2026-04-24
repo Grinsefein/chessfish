@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex flex-col items-center justify-center p-6 text-center bg-card border border-destructive/20 rounded-2xl shadow-2xl">
+        <div className="flex flex-col items-center justify-center p-6 text-center bg-zinc-900 border-2 border-destructive/20 rounded-2xl shadow-[0_8px_0_0_#09090b]">
           <div className="w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
             <AlertTriangle className="w-8 h-8 text-destructive" />
           </div>
@@ -101,7 +101,7 @@ export function ChessboardErrorBoundary({ children }: { children: ReactNode }) {
     <ErrorBoundary 
       componentName="Chessboard"
       fallback={
-        <div className="flex items-center justify-center h-[500px] bg-card border border-white/5 rounded-lg">
+        <div className="flex items-center justify-center h-[500px] bg-zinc-900 border-2 border-zinc-800 rounded-lg">
           <div className="text-center">
             <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-3" />
             <p className="text-sm font-bold">Chessboard failed to load</p>

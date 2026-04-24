@@ -82,13 +82,13 @@ export function OAuthConnections() {
   const isLichessConfigured = !!LICHESS_CLIENT_ID;
 
   return (
-    <Card className="bg-card border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-      <CardHeader className="p-4 border-b border-white/5">
+    <Card className="bg-zinc-900 border-2 border-zinc-800 rounded-2xl overflow-hidden shadow-[0_8px_0_0_#09090b]">
+      <CardHeader className="p-4 border-b-2 border-2 border-zinc-800">
         <h3 className="text-sm font-black uppercase tracking-widest">Account Connections</h3>
       </CardHeader>
       <CardContent className="p-4 space-y-4">
         {/* Chess.com Connection */}
-        <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-zinc-950 rounded-lg">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
               <span className="text-green-400 font-bold text-xs">C</span>
@@ -131,7 +131,7 @@ export function OAuthConnections() {
         </div>
 
         {/* Lichess Connection */}
-        <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-zinc-950 rounded-lg">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
               <span className="text-blue-400 font-bold text-xs">L</span>
@@ -308,7 +308,7 @@ export function OAuthCallback() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-96 bg-card border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+      <Card className="w-96 bg-zinc-900 border-2 border-zinc-800 rounded-2xl overflow-hidden shadow-[0_8px_0_0_#09090b]">
         <CardContent className="p-6 text-center">
           {status === 'processing' && (
             <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />

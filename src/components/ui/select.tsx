@@ -37,17 +37,17 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "flex h-9 w-full items-center justify-between rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white shadow-sm ring-offset-background transition-colors",
+        "flex h-11 w-full items-center justify-between rounded-xl border-2 border-zinc-800 bg-zinc-950 px-4 py-2 text-sm font-black text-white shadow-[0_2px_0_0_#09090b] transition-all",
         "placeholder:text-zinc-500",
-        "focus:outline-none focus:ring-2 focus:ring-primary/50",
+        "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        "[&>span]:line-clamp-1",
+        "[&>span]:line-clamp-1 uppercase tracking-wider",
         className
       )}
       {...props}
     >
       {children}
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <ChevronDown className="h-4 w-4 text-zinc-500" />
     </SelectPrimitive.Trigger>
   )
 }
@@ -79,7 +79,7 @@ function SelectContent({
       <SelectPrimitive.Popup
         data-slot="select-content"
         className={cn(
-          "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-white/10 bg-zinc-900 text-white shadow-xl",
+          "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border-2 border-zinc-800 bg-zinc-900 text-white shadow-[0_8px_0_0_#09090b]",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -91,7 +91,7 @@ function SelectContent({
         )}
         {...props}
       >
-        <div className="p-1">
+        <div className="p-1.5">
           {children}
         </div>
       </SelectPrimitive.Popup>
@@ -108,15 +108,15 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-lg py-2 pl-8 pr-2 text-sm text-zinc-300 outline-none transition-colors",
-        "hover:bg-white/5 hover:text-white",
-        "focus:bg-white/5 focus:text-white",
+        "relative flex w-full cursor-pointer select-none items-center rounded-lg py-2.5 pl-9 pr-3 text-sm font-bold text-zinc-400 outline-none transition-colors uppercase tracking-tight",
+        "hover:bg-zinc-800 hover:text-white",
+        "focus:bg-zinc-800 focus:text-white",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span className="absolute left-2.5 flex h-4 w-4 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <Check className="h-4 w-4 text-primary" />
         </SelectPrimitive.ItemIndicator>
@@ -151,7 +151,7 @@ function SelectLabel({
     <div
       data-slot="select-label"
       className={cn(
-        "px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider",
+        "px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]",
         className
       )}
       {...props}
@@ -168,7 +168,7 @@ function SelectSeparator({
   return (
     <div
       data-slot="select-separator"
-      className={cn("-mx-1 my-1 h-px bg-white/10", className)}
+      className={cn("-mx-1 my-1.5 h-0.5 bg-zinc-800", className)}
       {...props}
     />
   )
