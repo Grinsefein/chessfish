@@ -1,4 +1,4 @@
-import { Bot } from '@/lib/bots';
+import { BotProfile } from '@/types/chess';
 
 export interface BotPersonality {
   id: string;
@@ -267,12 +267,14 @@ export function getBotQuote(
 }
 
 // Convert personality to legacy Bot format
-export function personalityToBot(personality: BotPersonality): Bot {
+export function personalityToBot(personality: BotPersonality): BotProfile {
   return {
     id: personality.id,
     name: personality.name,
     skillLevel: Math.round(personality.elo / 250),
     elo: personality.elo,
-    description: personality.description
+    description: personality.description,
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${personality.id}`,
+    thinkTime: Math.max(500, 2000 - personality.elo / 2)
   };
 }

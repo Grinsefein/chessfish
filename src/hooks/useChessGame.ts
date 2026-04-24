@@ -2,11 +2,33 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Chess, Move } from 'chess.js';
 
 export function useChessGame() {
-  const [game, setGame] = useState(new Chess());
-  const [lastMove, setLastMove] = useState<{ from: string; to: string } | undefined>();
+  const [game, setGame] = useState(() => {
+    const savedPgn = typeof window !== 'undefined' ? localStorage.getItem('chessfish_pgn') : null;
+    const newGame = new Chess();
+    if (savedPgn) {
+      try {
+        newGame.loadPgn(savedPgn);
+      } catch (e) {
+        console.error("Failed to load saved PGN", e);
+      }
+    }
+    return newGame;
+  });
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | undefined>(() => {
+    const savedLastMove = typeof window !== 'undefined' ? localStorage.getItem('chessfish_lastMove') : null;
+    return savedLastMove ? JSON.parse(savedLastMove) : undefined;
+  });
 
-  // Use a counter or timestamp to force re-renders if needed, 
-  // but since we replace the game instance, game.fen() should be enough.
+  // Save game to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('chessfish_pgn', game.pgn());
+    if (lastMove) {
+      localStorage.setItem('chessfish_lastMove', JSON.stringify(lastMove));
+    } else {
+      localStorage.removeItem('chessfish_lastMove');
+    }
+  }, [game, lastMove]);
+
   const fen = useMemo(() => game.fen(), [game]);
 
   const makeMove = useCallback((move: string | { from: string; to: string; promotion?: string }) => {

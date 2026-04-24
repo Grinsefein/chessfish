@@ -26,6 +26,26 @@ export function useStockfish() {
   const [nnueEnabled, setNnueEnabled] = useState(true);
   const [currentNNUE, setCurrentNNUE] = useState<NNUEFile | null>(getDefaultNNUE);
   const [nnueDownloadProgress, setNnueDownloadProgress] = useState<number | null>(null);
+  const [engineVersion, setEngineVersionState] = useState('Stockfish 16.1 (WASM)');
+  const [isActive, setIsActive] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('chessfish_engineActive') !== 'false';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('chessfish_engineActive', isActive.toString());
+  }, [isActive]);
+
+  const ENGINE_VERSIONS = [
+    { name: 'Stockfish 16.1 (WASM)', url: 'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16.js' },
+    { name: 'Stockfish 16 (NNUE)', url: 'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish-nnue-16.js' },
+    { name: 'Stockfish 10 (Legacy)', url: 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js' }
+  ];
+
+  const setEngineVersion = useCallback((name: string) => {
+    setEngineVersionState(name);
+    reboot();
+  }, []);
 
   const reboot = useCallback(() => {
     setRebootKey(prev => prev + 1);
@@ -60,123 +80,33 @@ export function useStockfish() {
   }, []);
 
   useEffect(() => {
+    if (!isActive) {
+      setIsReady(false);
+      return;
+    }
     let worker: Worker | null = null;
-    let objectURL: string | null = null;
-    
+
     async function initStockfish() {
       try {
         setError(null);
         setIsReady(false);
 
-        // Versioned URL for better reliability
-        const cdnUrls = [
-          'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js',
-          'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js'
-        ];
+        // Use local stockfish.js from public directory with absolute path
+        // This ensures the worker file is correctly loaded in both dev and production
+        const workerUrl = '/stockfish.js';
 
-        let stockfishCode = '';
-        let lastErr = null;
-
-        for (const url of cdnUrls) {
-          try {
-            const response = await fetch(url);
-            if (response.ok) {
-              stockfishCode = await response.text();
-              break;
-            }
-          } catch (e) {
-            lastErr = e;
-          }
-        }
-
-        if (!stockfishCode) {
-          throw new Error('Failed to fetch Stockfish library. Please check your network connection.');
-        }
-
-        const workerScript = `
-          (function() {
-            var originalOnMessage = self.onmessage;
-            self.onmessage = null; // Clear to detect if the library sets it
-
-            ${stockfishCode}
-            
-            var StockfishFn = self.Stockfish || self.STOCKFISH || self.StockfishWasm;
-            
-            // Try Module-based detection first for newer builds
-            if (!StockfishFn && self.Module) {
-               if (typeof self.Module.Stockfish === 'function') StockfishFn = self.Module.Stockfish;
-               else if (typeof self.Module === 'function') StockfishFn = self.Module;
-            }
-
-            // Detect exported as a function directly (some builds do this)
-            if (!StockfishFn && typeof self['stockfish.js'] === 'function') StockfishFn = self['stockfish.js'];
-            
-            // If the library didn't provide a factory but set onmessage, it's a standalone worker
-            if (!StockfishFn && typeof self.onmessage === 'function' && self.onmessage !== originalOnMessage) {
-              var libOnMessage = self.onmessage;
-              self.onmessage = function(event) { libOnMessage(event); };
-              postMessage('debug: engine initialized (standalone mode)');
-              return;
-            }
-
-            // Fallback for legacy flat builds that expose uci_command or main
-            if (!StockfishFn && (typeof self._uci_command === 'function' || typeof self._main === 'function')) {
-              StockfishFn = function() {
-                var engine = {
-                  postMessage: function(msg) { try { if (self._uci_command) self._uci_command(msg); } catch(e) {} },
-                  onmessage: null
-                };
-                var nativePostMessage = self.postMessage;
-                self.postMessage = function(msg) {
-                  if (engine.onmessage) engine.onmessage({ data: msg });
-                  nativePostMessage(msg);
-                };
-                if (typeof self._main === 'function') setTimeout(function() { try { self._main(); } catch(e) {} }, 0);
-                return engine;
-              };
-            }
-
-            if (StockfishFn) {
-              var engine = typeof StockfishFn === 'function' ? StockfishFn() : StockfishFn;
-              
-              if (engine && typeof engine.then === 'function') {
-                engine.then(function(instance) {
-                  setupEngine(instance);
-                });
-              } else {
-                setupEngine(engine);
-              }
-
-              function setupEngine(e) {
-                e.onmessage = function(event) {
-                  postMessage(typeof event === 'string' ? event : event.data);
-                };
-                
-                onmessage = function(event) {
-                  e.postMessage(event.data);
-                };
-                postMessage('debug: engine initialized successfully');
-              }
-            } else {
-              postMessage('error: Stockfish function not found. Available: ' + Object.keys(self).filter(k => k.length < 50).join(', '));
-            }
-          })();
-        `;
-
-        const blob = new Blob([workerScript], { type: 'application/javascript' });
-        objectURL = URL.createObjectURL(blob);
-        
         try {
-          worker = new Worker(objectURL);
+          worker = new Worker(workerUrl, { type: 'classic' });
         } catch (e) {
-          throw new Error('Worker setup failed. Your browser may have blocked standard Web Workers.');
+          console.error("Worker creation error:", e);
+          throw new Error('Failed to initialize Stockfish worker. Please check that /stockfish.js exists in the public directory.');
         }
 
         workerRef.current = worker;
-        
+
         worker.onerror = (err: ErrorEvent) => {
           console.error("Worker Execution Error:", err);
-          setError("Stockfish Worker Error: Execution failed.");
+          setError("Stockfish Worker Error: " + (err.message || "Execution failed"));
         };
 
         worker.onmessage = (e) => {
@@ -278,9 +208,8 @@ export function useStockfish() {
 
     return () => {
       if (worker) worker.terminate();
-      if (objectURL) URL.revokeObjectURL(objectURL);
     };
-  }, [multiPV, rebootKey]);
+  }, [multiPV, rebootKey, isActive]);
 
   const analyze = useCallback((fen: string, depth = 12) => {
     if (!workerRef.current || !isReady) return;
@@ -345,6 +274,11 @@ export function useStockfish() {
     currentNNUE,
     setNNUEFile,
     nnueDownloadProgress,
-    refreshNNUE
+    refreshNNUE,
+    engineVersion,
+    setEngineVersion,
+    ENGINE_VERSIONS,
+    isActive,
+    setIsActive
   };
 }

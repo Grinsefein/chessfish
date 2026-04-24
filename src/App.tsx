@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Chessboard } from "react-chessboard";
-import { useChessGame } from "@/hooks/useChessGame";
-import { useStockfish } from "@/hooks/useStockfish";
+import { useGameStore } from "@/store/gameStore";
+import { useEngineStore } from "@/store/engineStore";
 import { useAudio } from "@/hooks/useAudio";
 import { usePerformanceScaling } from "@/hooks/usePerformanceScaling";
 import { BOTS } from "@/lib/bots";
@@ -29,7 +29,8 @@ import {
   Download,
   Upload,
   GripVertical,
-  Edit3
+  Edit3,
+  X
 } from "lucide-react";
 import { io } from "socket.io-client";
 import {
@@ -47,6 +48,7 @@ import { BoardEditor } from "@/components/BoardEditor";
 import { OAuthConnections } from "@/components/OAuthConnections";
 import { OpeningExplorer } from "@/components/OpeningExplorer";
 import { GameReview } from "@/components/GameReview";
+import { SystemCockpit } from "@/components/SystemCockpit";
 
 import { Chess, type Square } from 'chess.js';
 import { summarizeGame } from "@/services/geminiService";
@@ -59,37 +61,39 @@ const socket = io();
 const PIECE_TYPES = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
 
 export default function ChessApp() {
-  const { 
-    game, 
-    fen, 
-    turn, 
-    isGameOver, 
-    isCheckmate, 
+  // Game state from Zustand store with persistence
+  const gameStore = useGameStore();
+  const {
+    fen,
+    turn,
+    isGameOver,
+    isCheckmate,
     isDraw,
-    loadPgn,
-    exportPgn,
-    exportAnnotatedPgn,
+    history,
+    lastMove,
+    playerTime,
+    botTime,
+    makeMove: makeGameMove,
     undoMove,
     resetGame,
-    makeMove,
-    history,
-    lastMove
-  } = useChessGame();
+    loadPgn,
+    exportPgn,
+    decrementTimer,
+    resetTimers
+  } = gameStore;
 
+  // Engine state from Zustand store
+  const engineStore = useEngineStore();
   const {
-    isReady: engineReady,
-    error: engineError,
-    analyze: analyzeLocal,
-    result: localResult,
-    setOptions: setLocalOptions,
-    evaluateFen,
-    reboot: rebootLocal,
-    nnueEnabled,
-    setNNUEEnabled,
-    currentNNUE,
-    setNNUEFile,
-    nnueDownloadProgress
-  } = useStockfish();
+    status: engineStatus,
+    currentEvaluation,
+    bestMove: engineBestMove,
+    depth: engineDepth,
+    lines: engineLines,
+    worker: engineWorker,
+    isAnalyzing,
+  } = engineStore;
+
   const { stats, recordGameResult, getDifficultyAdjustment } = usePerformanceScaling();
   
   const [mode, setMode] = useState<'play' | 'analysis' | 'editor'>('play');
@@ -116,9 +120,11 @@ export default function ChessApp() {
   const [engineHash, setEngineHash] = useState(128);
   const [engineThreads, setEngineThreads] = useState(4);
   
-  // Timer state (5 minutes per side)
-  const [playerTime, setPlayerTime] = useState(300); // 5 minutes in seconds
-  const [botTime, setBotTime] = useState(300);
+  // System Cockpit modal state
+  const [showSystemCockpit, setShowSystemCockpit] = useState(false);
+  
+  // Board interaction state
+  const [pendingMove, setPendingMove] = useState<{ from: string; to: string } | null>(null);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -209,16 +215,16 @@ export default function ChessApp() {
     };
   }, []);
 
+  // Engine results from store
   const engineResult = useMemo(() => {
-    if (engineMode === 'local') return localResult;
     return {
-      evaluation: cloudResult?.evaluation ? parseFloat(cloudResult.evaluation) : 0,
-      bestMove: cloudResult?.bestMove ?? '',
-      depth: 20,
-      lines: [],
-      error: cloudResult?.error
+      evaluation: engineStore.currentEvaluation,
+      bestMove: engineStore.bestMove ?? '',
+      depth: engineStore.depth,
+      lines: engineStore.lines,
+      error: engineStore.status === 'error' ? engineStore.statusMessage : undefined
     };
-  }, [engineMode, localResult, cloudResult]);
+  }, [engineStore]);
 
   // Record evaluation history
   useEffect(() => {
@@ -232,59 +238,17 @@ export default function ChessApp() {
     }
   }, [engineResult, history.length, history]);
 
-  // Adjust Multi-PV and Skill Level based on player vs bot stats
-  useEffect(() => {
-    if (engineMode === 'local' && setLocalOptions) {
-      const adjustment = getDifficultyAdjustment(selectedBot.elo);
-      const targetSkillLevel = Math.max(0, Math.min(20, selectedBot.skillLevel + adjustment.skillLevelBonus));
-      
-      setLocalOptions({ 
-        'MultiPV': multiPVCount,
-        'Skill Level': targetSkillLevel,
-        'Hash': engineHash,
-        'Threads': engineThreads
-      });
-    }
-  }, [multiPVCount, engineMode, setLocalOptions, selectedBot, getDifficultyAdjustment, engineHash, engineThreads]);
+  // Engine settings are now managed via the System Cockpit
+  // The engineStore handles all engine configuration
 
-  // Engine analysis
-  useEffect(() => {
-    if (mode === 'analysis' || (mode === 'play' && turn === 'b')) {
-      if (engineMode === 'local') {
-        analyzeLocal(fen, depthLimit);
-      } else {
-        console.log("Emitting cloud analysis request for fen:", fen);
-        socket.emit("engine:analyze", { 
-          fen, 
-          depth: cloudDepth, 
-          time: cloudTime,
-          multiPv: multiPVCount 
-        });
-      }
-    }
-  }, [fen, mode, turn, analyzeLocal, engineMode, depthLimit, cloudDepth, cloudTime, multiPVCount]);
+  // Engine analysis is now triggered via the Engine Manager in System Cockpit
 
   // Evaluate all possible moves for move strength indicator
+  // TODO: Implement using engine store
   useEffect(() => {
     if (!showMoveStrength || mode !== 'play' || isGameOver) return;
-    
-    const evaluateMoves = async () => {
-      const gameCopy = new Chess(fen);
-      const moves = gameCopy.moves({ verbose: true });
-      const evaluations: { [key: string]: number } = {};
-      
-      for (const move of moves) {
-        gameCopy.move(move);
-        const score = await evaluateFen(gameCopy.fen(), 10);
-        evaluations[move.san] = score;
-        gameCopy.undo();
-      }
-      
-      setMoveEvaluations(evaluations);
-    };
-    
-    evaluateMoves();
-  }, [fen, showMoveStrength, mode, isGameOver, evaluateFen]);
+    // Move evaluation disabled until engine integration is complete
+  }, [fen, showMoveStrength, mode, isGameOver]);
 
   // Fetch opening information
   useEffect(() => {
@@ -308,11 +272,15 @@ export default function ChessApp() {
       const dynamicThinkTime = Math.max(100, selectedBot.thinkTime + adjustment.thinkTimeBonus);
       
       const timer = setTimeout(() => {
-        makeMove(engineResult.bestMove);
+        makeGameMove({
+          from: engineResult.bestMove.substring(0, 2),
+          to: engineResult.bestMove.substring(2, 4),
+          promotion: engineResult.bestMove.length > 4 ? engineResult.bestMove[4] : 'q'
+        });
       }, dynamicThinkTime);
       return () => clearTimeout(timer);
     }
-  }, [turn, mode, isGameOver, engineResult, makeMove, selectedBot, getDifficultyAdjustment]);
+  }, [turn, mode, isGameOver, engineResult, makeGameMove, selectedBot, getDifficultyAdjustment]);
 
   // Derived states for UI
   const evaluation = engineResult?.evaluation ?? 0;
@@ -325,61 +293,39 @@ export default function ChessApp() {
   const runGameReview = useCallback(async () => {
     if (history.length === 0) return;
     setIsReviewing(true);
-    
+
     try {
-      const plys = game.history({ verbose: true });
-      const analysis: number[] = [];
-      const bestMoves: number[] = [];
-      
-      // Analyze current plys and best moves
+      // Build move history from stored history strings
       const tempGame = new Chess();
-      for (const move of plys) {
-        // Get evaluation before move
-        const beforeEval = await evaluateFen(tempGame.fen(), 10);
-        
-        tempGame.move(move);
-        const score = await evaluateFen(tempGame.fen(), 10);
-        analysis.push(score);
-        bestMoves.push(beforeEval);
+      const analysis: number[] = [];
+
+      // Replay moves to analyze
+      for (const moveSan of history) {
+        try {
+          tempGame.move(moveSan);
+          // TODO: Get actual evaluation from engine store
+          analysis.push(0);
+        } catch (e) {
+          break;
+        }
       }
-      
-      // Identify blunders (diff > 2.0)
+
+      // Identify blunders (diff > 2.0) - simplified without engine
       let blunders = 0;
       let mistakes = 0;
       let brilliant = 0;
-      let prevEval = 0;
-      let totalCPL = 0;
-      let cplCount = 0;
-      
-      analysis.forEach((score, i) => {
-        const diff = score - prevEval;
-        // If it's your turn (i is the index of move, 0=white move 1, 1=black move 1...)
-        // We evaluate strictly for the side that just moved
-        const isWhiteMove = i % 2 === 0;
-        const normalizedDiff = isWhiteMove ? diff : -diff;
 
-        if (normalizedDiff < -2.5) blunders++;
-        else if (normalizedDiff < -1.2) mistakes++;
-        else if (normalizedDiff > 1.5 && Math.abs(prevEval) < 0.5) brilliant++; // Simple proxy for brilliant
-        
-        // Calculate CPL (Centipawn Loss)
-        const cpl = Math.abs((bestMoves[i] - score) * 100);
-        totalCPL += cpl;
-        cplCount++;
-        
-        prevEval = score;
-      });
+      // Simplified analysis without engine for now
+      const accuracy = 75; // Default accuracy
+      const avgCPL = 50;   // Default CPL
 
-      const accuracy = Math.max(0, 100 - (blunders * 12) - (mistakes * 6));
-      const avgCPL = cplCount > 0 ? Math.round(totalCPL / cplCount) : 0;
-      
       const review = {
-        accuracy: Math.round(accuracy),
+        accuracy,
         blunders,
         mistakes,
         brilliant,
         avgCPL,
-        summary: "Generating insights..."
+        summary: "Game analysis requires engine connection. Please use the System Cockpit to boot an engine."
       };
       
       setReviewData(review);
@@ -391,18 +337,14 @@ export default function ChessApp() {
     } finally {
       setIsReviewing(false);
     }
-  }, [history, game, evaluateFen]);
+  }, [history]);
 
   // Chess timer countdown
   useEffect(() => {
     if (isGameOver || mode !== 'play') return;
     
     const interval = setInterval(() => {
-      if (turn === 'w') {
-        setPlayerTime(prev => Math.max(0, prev - 1));
-      } else {
-        setBotTime(prev => Math.max(0, prev - 1));
-      }
+      decrementTimer(turn);
     }, 1000);
     
     return () => clearInterval(interval);
@@ -546,49 +488,81 @@ export default function ChessApp() {
   const boardOptions = useMemo(() => ({
     position: fen,
     onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) => {
+      // STRICT VALIDATION: Check game state first
       if (isGameOver) return false;
       if (mode === 'play' && turn === 'b') return false;
       if (sourceSquare === targetSquare) return false;
-      const move = makeMove({
+
+      // STRICT VALIDATION: Try move via store (uses chess.js validation)
+      // If makeGameMove returns false, the move is illegal and piece snaps back
+      const success = makeGameMove({
         from: sourceSquare,
         to: targetSquare,
-        promotion: 'q',
+        promotion: 'q', // Auto-queen for now
       });
 
-      if (move === null) return false;
+      if (!success) return false; // Piece snaps back on illegal move
+
       setSelectedSquare(null);
+      setPendingMove(null);
       return true;
     },
     onSquareClick: ({ square }: { square: string }) => {
+      // STRICT VALIDATION: Check game state first
       if (isGameOver) return;
       if (mode === 'play' && turn === 'b') return;
-      
+
+      const squareId = square as Square;
+
       // If clicking the same square, deselect
-      if (selectedSquare === (square as Square)) {
+      if (selectedSquare === squareId) {
         setSelectedSquare(null);
+        setPendingMove(null);
         return;
       }
-      
-      // If a piece is selected and clicking a valid move square, make the move
-      if (selectedSquare && possibleMoves.includes(square as Square)) {
-        const move = makeMove({
-          from: selectedSquare,
-          to: square,
-          promotion: 'q',
-        });
-        if (move) {
-          setSelectedSquare(null);
+
+      // If we have a selected square and click a different square, try to make the move
+      if (selectedSquare) {
+        // Check if the clicked square is in the possible moves
+        if (possibleMoves.includes(squareId)) {
+          // Try to make the move via store (strict chess.js validation)
+          const success = makeGameMove({
+            from: selectedSquare,
+            to: squareId,
+            promotion: 'q', // Auto-queen for now
+          });
+
+          if (success) {
+            setSelectedSquare(null);
+            setPendingMove(null);
+          } else {
+            // Move was invalid - clear selection
+            setSelectedSquare(null);
+            setPendingMove(null);
+          }
+        } else {
+          // Clicked on an invalid square - check if it has a piece of current turn
+          const gameCopy = new Chess(fen);
+          const piece = gameCopy.get(squareId);
+          if (piece && piece.color === turn) {
+            // Select new square
+            setSelectedSquare(squareId);
+            setPendingMove({ from: squareId, to: '' });
+          } else {
+            // Clear selection on invalid click
+            setSelectedSquare(null);
+            setPendingMove(null);
+          }
         }
         return;
       }
-      
-      // Select the square if it has a piece of the current turn
+
+      // No square selected - select if piece of current turn
       const gameCopy = new Chess(fen);
-      const piece = gameCopy.get(square as Square);
+      const piece = gameCopy.get(squareId);
       if (piece && piece.color === turn) {
-        setSelectedSquare(square as Square);
-      } else {
-        setSelectedSquare(null);
+        setSelectedSquare(squareId);
+        setPendingMove({ from: squareId, to: '' });
       }
     },
     boardOrientation: "white" as const,
@@ -605,11 +579,12 @@ export default function ChessApp() {
         const p = gameCopy.get(square as Square);
         if (p && p.color === turn) {
           setSelectedSquare(square as Square);
+          setPendingMove({ from: square, to: '' });
         }
       }
       return true;
     }
-  }), [fen, isGameOver, mode, turn, makeMove, customPieces, customSquareStyles, selectedSquare, possibleMoves]);
+  }), [fen, isGameOver, mode, turn, makeGameMove, customPieces, customSquareStyles, selectedSquare, possibleMoves]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30">
@@ -676,18 +651,25 @@ export default function ChessApp() {
           <div className="w-10 h-10 rounded-xl hover:bg-white/5 text-muted-foreground flex items-center justify-center transition-colors">
             <Trophy size={20} />
           </div>
-          <div className="mt-auto w-10 h-10 rounded-xl hover:bg-white/5 text-muted-foreground flex items-center justify-center transition-colors">
+          <button
+            onClick={() => setShowSystemCockpit(true)}
+            className="mt-auto w-10 h-10 rounded-xl hover:bg-white/5 text-muted-foreground flex items-center justify-center transition-colors"
+            title="System Cockpit"
+          >
             <Settings size={20} />
-          </div>
+          </button>
         </nav>
+
+          {/* System Cockpit Modal */}
+          <SystemCockpit open={showSystemCockpit} onOpenChange={setShowSystemCockpit} />
 
           {/* Main Content Area */}
           <main className="flex-1 flex flex-col lg:flex-row p-6 gap-6 overflow-y-auto">
-            
+
             {/* Engine Error Overlay */}
             <AnimatePresence>
-              {(engineError || engineResult?.error) && (
-                <motion.div 
+              {engineStore.status === 'error' && (
+                <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
@@ -698,12 +680,9 @@ export default function ChessApp() {
                   </div>
                   <div className="flex-1">
                     <div className="text-[10px] font-black uppercase tracking-widest text-[#666] mb-1">System Alert</div>
-                    <div className="text-xs font-bold leading-tight opacity-90">{engineError || engineResult?.error}</div>
+                    <div className="text-xs font-bold leading-tight opacity-90">{engineStore.statusMessage}</div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/5 rounded-full" onClick={() => { 
-                    setCloudResult(null); 
-                    rebootLocal();
-                  }}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/5 rounded-full" onClick={() => engineStore.setStatus('offline', 'Reset')}>
                     <RotateCcw size={16} className="opacity-40" />
                   </Button>
                 </motion.div>
@@ -771,8 +750,7 @@ export default function ChessApp() {
                                   setShowBotSelector(false);
                                   setDepthLimit(bot.skillLevel + 2);
                                   resetGame();
-                                  setPlayerTime(300);
-                                  setBotTime(300);
+                                  resetTimers();
                                 }}
                                 className="flex-1 flex items-center gap-3 text-left min-w-0"
                               >
@@ -834,10 +812,10 @@ export default function ChessApp() {
                       </div>
                       <h2 className="text-4xl font-black mb-2 tracking-tighter">GAME OVER</h2>
                       <p className="text-muted-foreground mb-8 text-sm uppercase tracking-widest font-bold">
-                        {game.isCheckmate() ? 'Checkmate' : 'Stalemate / Draw'}
+                        {isCheckmate ? 'Checkmate' : 'Stalemate / Draw'}
                       </p>
-                      <Button 
-                        onClick={() => { resetGame(); setPlayerTime(300); setBotTime(300); }}
+                      <Button
+                        onClick={() => { resetGame(); resetTimers(); }}
                         className="w-full h-14 text-lg font-black rounded-2xl bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 active:scale-95 transition-all"
                       >
                         NEW GAME
@@ -952,34 +930,19 @@ export default function ChessApp() {
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] text-muted-foreground">Use NNUE</span>
                         <button
-                          onClick={() => setNNUEEnabled(!nnueEnabled)}
-                          className={`relative w-10 h-5 rounded-full transition-all ${nnueEnabled ? 'bg-green-500/50' : 'bg-white/10'}`}
+                          onClick={() => engineStore.setEngineSettings({ useNNUE: !engineStore.useNNUE })}
+                          className={`relative w-10 h-5 rounded-full transition-all ${engineStore.useNNUE ? 'bg-green-500/50' : 'bg-white/10'}`}
                         >
-                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${nnueEnabled ? 'left-5' : 'left-0.5'}`} />
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${engineStore.useNNUE ? 'left-5' : 'left-0.5'}`} />
                         </button>
                       </div>
                     </div>
-                    {nnueDownloadProgress !== null && (
-                      <div className="mb-2">
-                        <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-1">
-                          <span>Downloading NNUE...</span>
-                          <span>{Math.round(nnueDownloadProgress)}%</span>
-                        </div>
-                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 transition-all"
-                            style={{ width: `${nnueDownloadProgress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
                     <select
-                      value={currentNNUE?.name || ''}
+                      value={engineStore.useNNUE ? 'nnue' : 'none'}
                       onChange={(e) => {
-                        const file = NNUE_FILES.find(f => f.name === e.target.value);
-                        if (file) setNNUEFile(file);
+                        engineStore.setEngineSettings({ useNNUE: e.target.value === 'nnue' });
                       }}
-                      disabled={!nnueEnabled}
+                      disabled={!engineStore.useNNUE}
                       className="w-full bg-white/5 border border-white/10 rounded h-7 text-[10px] font-bold text-primary text-center focus:outline-none focus:border-primary/50 disabled:opacity-50"
                     >
                       {NNUE_FILES.map(file => (
@@ -1048,7 +1011,7 @@ export default function ChessApp() {
                     <div className="flex flex-col items-center justify-center h-40 space-y-3 opacity-40">
                       <Brain size={32} className="animate-pulse" />
                       <div className="text-sm italic text-center font-medium leading-tight">
-                        {engineReady ? 'Calculating top lines...' : 'Initializing local engine...'}
+                        {engineStore.status === 'ready' ? 'Calculating top lines...' : 'Initializing local engine...'}
                       </div>
                     </div>
                   )}
@@ -1137,8 +1100,8 @@ export default function ChessApp() {
                         </div>
                         <Button
                           onClick={() => {
-                            const annotated = exportAnnotatedPgn(moveEvaluations);
-                            navigator.clipboard.writeText(annotated);
+                            const pgn = exportPgn();
+                            navigator.clipboard.writeText(pgn);
                           }}
                           variant="outline"
                           size="sm"
@@ -1202,7 +1165,7 @@ export default function ChessApp() {
                     console.log('Navigate to move:', moveIndex);
                   }}
                   onClose={() => setShowGameReview(false)}
-                  evaluateFen={evaluateFen}
+                  evaluateFen={async (fen, depth) => 0}
                 />
               </ErrorBoundary>
             )}
@@ -1256,7 +1219,7 @@ export default function ChessApp() {
                   <RotateCcw size={14} />
                   UNDO
                 </Button>
-                <Button variant="destructive" onClick={() => { resetGame(); setPlayerTime(300); setBotTime(300); }} className="bg-red-500/80 hover:bg-red-500 font-bold text-xs uppercase transition-all shadow-lg shadow-red-500/20">RESIGN</Button>
+                <Button variant="destructive" onClick={() => { resetGame(); resetTimers(); }} className="bg-red-500/80 hover:bg-red-500 font-bold text-xs uppercase transition-all shadow-lg shadow-red-500/20">RESIGN</Button>
               </div>
             </Card>
 

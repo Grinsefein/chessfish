@@ -55,8 +55,7 @@ export async function analyzeGame(
 ): Promise<GameReview | null> {
   try {
     const game = new Chess();
-    const success = game.load_pgn(pgn);
-    if (!success) return null;
+    game.loadPgn(pgn);
 
     const history = game.history({ verbose: true });
     const moveAnalyses: MoveAnalysis[] = [];

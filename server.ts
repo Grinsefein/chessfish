@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import http from "http";
 import { spawn, ChildProcess } from "child_process";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,15 +14,44 @@ const __dirname = path.dirname(__filename);
 class StockfishEngine {
   private engine: ChildProcess | null = null;
   private isReady: boolean = false;
+  private isActive: boolean = false;
   private analysisCallbacks: Map<string, (result: any) => void> = new Map();
+  private enginePath: string = '/usr/local/bin/stockfish';
 
   constructor() {
+    // Don't auto-start - wait for activation
+  }
+
+  activate(path?: string) {
+    if (this.isActive) {
+      console.log('Engine already active');
+      return { success: true, message: 'Engine already active' };
+    }
+    
+    if (path) this.enginePath = path;
     this.startEngine();
+    this.isActive = true;
+    return { success: true, message: 'Engine activation started' };
+  }
+
+  deactivate() {
+    if (!this.isActive) {
+      return { success: true, message: 'Engine already inactive' };
+    }
+    
+    this.isActive = false;
+    this.isReady = false;
+    if (this.engine) {
+      this.engine.kill();
+      this.engine = null;
+    }
+    return { success: true, message: 'Engine deactivated' };
   }
 
   private startEngine() {
     try {
-      this.engine = spawn('/usr/local/bin/stockfish');
+      console.log(`Starting Stockfish from: ${this.enginePath}`);
+      this.engine = spawn(this.enginePath);
       
       this.engine.stdout?.on('data', (data) => {
         const output = data.toString();
@@ -35,14 +65,17 @@ class StockfishEngine {
       this.engine.on('close', (code) => {
         console.log(`Stockfish process exited with code ${code}`);
         this.isReady = false;
-        // Restart after delay
-        setTimeout(() => this.startEngine(), 1000);
+        // Only restart if still active
+        if (this.isActive) {
+          setTimeout(() => this.startEngine(), 1000);
+        }
       });
 
       // Initialize UCI
       this.sendCommand('uci');
     } catch (error) {
       console.error('Failed to start Stockfish:', error);
+      this.isReady = false;
     }
   }
 
@@ -171,12 +204,33 @@ class StockfishEngine {
       }, time);
     });
   }
+
+  getStatus() {
+    return {
+      ready: this.isReady,
+      active: this.isActive,
+      engine: 'stockfish',
+      path: this.enginePath
+    };
+  }
+
+  updateConfig(path: string, settings: any) {
+    console.log('Engine config update requested (not implemented):', path, settings);
+  }
 }
 
 const stockfishEngine = new StockfishEngine();
 
 async function startServer() {
   const app = express();
+
+  // Enable Cross-Origin Isolation for SharedArrayBuffer (required by Stockfish WASM)
+  app.use((req, res, next) => {
+    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    next();
+  });
+
   const server = http.createServer(app);
   const io = new Server(server, {
     cors: {
@@ -191,6 +245,29 @@ async function startServer() {
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
+    // Send initial status
+    socket.emit("engine:status", stockfishEngine.getStatus());
+
+    socket.on("engine:activate", (data) => {
+      console.log("Activating server engine:", data);
+      const result = stockfishEngine.activate(data?.path);
+      socket.emit("engine:activation_result", result);
+      io.emit("engine:status", stockfishEngine.getStatus());
+    });
+
+    socket.on("engine:deactivate", () => {
+      console.log("Deactivating server engine");
+      const result = stockfishEngine.deactivate();
+      socket.emit("engine:deactivation_result", result);
+      io.emit("engine:status", stockfishEngine.getStatus());
+    });
+
+    socket.on("engine:update_config", (data) => {
+      console.log("Updating server engine config:", data);
+      stockfishEngine.updateConfig(data.path, data.settings);
+      io.emit("engine:status", stockfishEngine.getStatus());
+    });
+
     socket.on("engine:analyze", async (payload) => {
       console.log("Engine analysis requested for fen:", payload.fen, "multiPv:", payload.multiPv);
       
@@ -201,11 +278,13 @@ async function startServer() {
           payload.time || 5000,
           payload.multiPv || 3
         );
+        
         socket.emit("engine:result", {
           fen: payload.fen,
           evaluation: result.evaluation || 0,
           bestMove: result.bestMove || '',
           lines: result.lines || [],
+          depth: result.depth,
           error: result.error
         });
       } catch (error) {
@@ -228,12 +307,32 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  const isProd = process.env.NODE_ENV === "production";
+  
+  if (!isProd) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom", // Use custom to handle index.html manually
     });
+    
     app.use(vite.middlewares);
+
+    app.get("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      if (url.startsWith('/api') || url.startsWith('/socket.io')) {
+        return next();
+      }
+
+      try {
+        let template = await fs.promises.readFile(path.resolve(__dirname, "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        console.error(e.stack);
+        res.status(500).end(e.stack);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));

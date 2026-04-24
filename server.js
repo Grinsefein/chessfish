@@ -158,6 +158,13 @@ async function startServer() {
         },
     });
     const PORT = 4000;
+    
+    // Required headers for SharedArrayBuffer support
+    app.use((req, res, next) => {
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+        next();
+    });
     // Socket.io for Real-time moves/Cloud Engine
     io.on("connection", (socket) => {
         console.log("A user connected:", socket.id);
