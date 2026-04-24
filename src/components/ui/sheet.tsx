@@ -28,7 +28,7 @@ export function Sheet({ open, onOpenChange, children, className }: SheetProps) {
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className={cn(
-              "fixed top-0 right-0 h-full z-50 bg-zinc-900 border-l border-white/[0.06] shadow-2xl",
+              "fixed top-0 right-0 h-full z-50 bg-zinc-900 border-l-2 border-white/[0.06] shadow-[0_8px_0_0_#09090b]",
               className
             )}
             style={{ width: className?.includes('w-[') ? undefined : '600px' }}
@@ -44,7 +44,7 @@ export function Sheet({ open, onOpenChange, children, className }: SheetProps) {
 export function SheetHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex items-center justify-between p-6 border-b border-white/[0.06]", className)}
+      className={cn("flex items-center justify-between p-6 border-b-2 border-white/[0.06]", className)}
       {...props}
     />
   )

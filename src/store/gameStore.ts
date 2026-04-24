@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Chess } from 'chess.js';
 
+export type MoveClassification =
+  | 'brilliant'
+  | 'great'
+  | 'best'
+  | 'excellent'
+  | 'good'
+  | 'inaccuracy'
+  | 'mistake'
+  | 'blunder'
+  | 'missed_win'
+  | 'book';
+
 interface GameState {
   // Game data
   fen: string;
@@ -9,6 +21,11 @@ interface GameState {
   history: string[];
   lastMove: { from: string; to: string } | null;
   
+  // Analysis & Review
+  classifications: Record<number, MoveClassification>;
+  accuracy: number | null;
+  counts: Record<string, number>;
+
   // Game status
   isGameOver: boolean;
   isCheckmate: boolean;
@@ -24,6 +41,8 @@ interface GameState {
   resetGame: () => void;
   makeMove: (move: { from: string; to: string; promotion?: string }) => boolean;
   undoMove: () => boolean;
+  setClassification: (index: number, classification: MoveClassification) => void;
+  setAccuracy: (accuracy: number) => void;
   loadPgn: (pgn: string) => boolean;
   loadFen: (fen: string) => boolean;
   exportPgn: () => string;
@@ -71,6 +90,21 @@ export const useGameStore = create<GameState>()(
         history: [],
         lastMove: null,
         
+        classifications: {},
+        accuracy: null,
+        counts: {
+          brilliant: 0,
+          great: 0,
+          best: 0,
+          excellent: 0,
+          good: 0,
+          inaccuracy: 0,
+          mistake: 0,
+          blunder: 0,
+          missed_win: 0,
+          book: 0,
+        },
+
         isGameOver: false,
         isCheckmate: false,
         isDraw: false,
@@ -88,6 +122,20 @@ export const useGameStore = create<GameState>()(
           pgn: '',
           history: [],
           lastMove: null,
+          classifications: {},
+          accuracy: null,
+          counts: {
+            brilliant: 0,
+            great: 0,
+            best: 0,
+            excellent: 0,
+            good: 0,
+            inaccuracy: 0,
+            mistake: 0,
+            blunder: 0,
+            missed_win: 0,
+            book: 0,
+          },
           isGameOver: false,
           isCheckmate: false,
           isDraw: false,
@@ -112,7 +160,7 @@ export const useGameStore = create<GameState>()(
             }
             
             // Update state with new position
-            set({
+            set((state) => ({
               fen: chess.fen(),
               pgn: chess.pgn(),
               history: chess.history(),
@@ -121,13 +169,30 @@ export const useGameStore = create<GameState>()(
               isCheckmate: chess.isCheckmate(),
               isDraw: chess.isDraw(),
               turn: chess.turn(),
-            });
+            }));
             
             return true;
           } catch (e) {
             return false;
           }
         },
+
+        setClassification: (index, classification) => set((state) => {
+          const current = state.classifications[index];
+          const newCounts = { ...state.counts };
+
+          if (current) {
+            newCounts[current] = Math.max(0, newCounts[current] - 1);
+          }
+          newCounts[classification] = (newCounts[classification] || 0) + 1;
+
+          return {
+            classifications: { ...state.classifications, [index]: classification },
+            counts: newCounts
+          };
+        }),
+
+        setAccuracy: (accuracy) => set({ accuracy }),
         
         // Undo last move
         undoMove: () => {
@@ -235,6 +300,9 @@ export const useGameStore = create<GameState>()(
         fen: state.fen,
         pgn: state.pgn,
         history: state.history,
+        classifications: state.classifications,
+        accuracy: state.accuracy,
+        counts: state.counts,
         isGameOver: state.isGameOver,
         isCheckmate: state.isCheckmate,
         isDraw: state.isDraw,

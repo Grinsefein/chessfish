@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Chessboard } from "react-chessboard";
+import React, { useState, useEffect, useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useEngineStore } from "@/store/engineStore";
-import { useAudio } from "@/hooks/useAudio";
 import { usePerformanceScaling } from "@/hooks/usePerformanceScaling";
 import { BOTS } from "@/lib/bots";
 import { Button } from "@/components/ui/button";
@@ -19,8 +17,11 @@ import { SystemCockpit } from "@/components/SystemCockpit";
 import { EngineAnalysisBar } from "@/components/EngineAnalysisBar";
 import { BotMatchDialog } from "@/components/BotMatchDialog";
 import { MoveHistory } from "@/components/MoveHistory";
+import { GameReview } from "@/components/GameReview";
+import { ClassificationBadge } from "@/components/ClassificationBadge";
 
 import { Chess, type Square } from 'chess.js';
+import { Chessboard } from "react-chessboard";
 import { cn } from '@/lib/utils';
 
 export default function ChessApp() {
@@ -45,15 +46,17 @@ export default function ChessApp() {
     lines: engineLines,
     isAnalyzing,
     activeView,
-    setActiveView
+    setActiveView,
+    drawArrows
   } = engineStore;
 
-  const { stats, getDifficultyAdjustment } = usePerformanceScaling();
+  const { getDifficultyAdjustment } = usePerformanceScaling();
   
   const [selectedBot, setSelectedBot] = useState(BOTS[0]);
   const [showSystemCockpit, setShowSystemCockpit] = useState(false);
   const [showBotMatchDialog, setShowBotMatchDialog] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [historyView, setHistoryView] = useState<'history' | 'review'>('history');
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const previewFen = useMemo(() => {
@@ -92,6 +95,22 @@ export default function ChessApp() {
   // Board Options Configuration
   const boardOptions = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
+    const arrows: any[] = [];
+
+    // Draw engine arrows if enabled
+    if (drawArrows && engineLines.length > 0 && activeView === 'analyze') {
+      engineLines.forEach((line, idx) => {
+        if (line.bestMove && line.bestMove.length >= 4) {
+          const from = line.bestMove.substring(0, 2);
+          const to = line.bestMove.substring(2, 4);
+          arrows.push([
+            from,
+            to,
+            idx === 0 ? '#10b981' : 'rgba(156, 163, 175, 0.4)'
+          ]);
+        }
+      });
+    }
 
     if (lastMove && previewIndex === null) {
       styles[lastMove.from] = { backgroundColor: 'rgba(255, 255, 0, 0.4)' };
@@ -131,6 +150,7 @@ export default function ChessApp() {
       animationDurationInMs: 200,
       allowDragging: previewIndex === null && (activeView === 'analyze' || turn === 'w'),
       squareStyles: styles,
+      customArrows: arrows,
       darkSquareStyle: { backgroundColor: 'hsla(94, 29%, 40%, 1)' },
       lightSquareStyle: { backgroundColor: 'hsla(60, 30%, 90%, 1)' },
       onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string, targetSquare: string }) => {
@@ -197,13 +217,14 @@ export default function ChessApp() {
           onViewChange={setActiveView}
           onOpenBotMatch={() => setShowBotMatchDialog(true)}
           onOpenImport={() => {}} 
+          onOpenSettings={() => setShowSystemCockpit(true)}
         />
         
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           {/* Header */}
-          <header className="w-full h-14 px-8 flex items-center justify-between border-b border-zinc-900 bg-zinc-950 shrink-0">
+          <header className="w-full h-14 px-8 flex items-center justify-between border-b-2 border-zinc-900 bg-zinc-950 shrink-0">
             <div className="flex items-center gap-4">
-              <div className="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+              <div className="flex bg-zinc-900 p-1 rounded-lg border-2 border-zinc-800">
                 <button className="flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-white transition-all">
                   <Monitor size={14} /> Local
                 </button>
@@ -240,7 +261,7 @@ export default function ChessApp() {
           <main className="flex-1 flex flex-col xl:flex-row gap-8 p-6 items-center xl:items-start justify-center">
             {/* Eval Bar */}
             <div className="hidden lg:flex flex-col items-center gap-2 py-2 h-[480px] self-center">
-              <div className="w-6 h-full bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden flex flex-col-reverse relative">
+              <div className="w-6 h-full bg-zinc-900 rounded-lg border-2 border-zinc-800 overflow-hidden flex flex-col-reverse relative">
                 <motion.div 
                   className="bg-white w-full transition-all duration-700 ease-out z-0 relative"
                   animate={{ height: `${evalPercentage}%` }}
@@ -254,26 +275,88 @@ export default function ChessApp() {
 
             {/* Board Area */}
             <div className="flex-1 max-w-[600px] w-full flex flex-col gap-4">
-              <div className="w-full aspect-square relative rounded-xl overflow-hidden border-[10px] border-zinc-900 shadow-xl">
+              <div className="w-full aspect-square relative rounded-xl overflow-hidden border-[10px] border-zinc-900 shadow-[0_4px_0_0_#09090b]">
                 <ChessboardErrorBoundary>
                   {/* @ts-ignore - This custom Chessboard build expects options prop */}
                   <Chessboard options={boardOptions} />
                 </ChessboardErrorBoundary>
+
+              {/* Classification Badges */}
+              {lastMove && activeView === 'analyze' && gameStore.classifications[previewIndex ?? (history.length - 1)] && (
+                <div
+                  className="absolute z-50 pointer-events-none"
+                  style={{
+                    left: turn === 'w'
+                      ? `${(lastMove.to.charCodeAt(0) - 97) * 12.5}%`
+                      : `${(104 - lastMove.to.charCodeAt(0)) * 12.5}%`,
+                    top: turn === 'w'
+                      ? `${(8 - parseInt(lastMove.to[1])) * 12.5}%`
+                      : `${(parseInt(lastMove.to[1]) - 1) * 12.5}%`,
+                    width: '12.5%',
+                    height: '12.5%'
+                  }}
+                >
+                  <ClassificationBadge
+                    classification={gameStore.classifications[previewIndex ?? (history.length - 1)]}
+                  />
+                </div>
+              )}
               </div>
               <EngineAnalysisBar />
             </div>
 
-            {/* Move History */}
-            <MoveHistory 
-              history={history}
-              onPreviewMove={setPreviewIndex}
-              previewIndex={previewIndex}
-              onExportPgn={exportPgn}
-              onExportFen={() => navigator.clipboard.writeText(boardFen)}
-              onOpenSettings={() => setShowSystemCockpit(true)}
-              onUndo={undoMove}
-              onResign={() => resetGame()}
-            />
+            {/* Move History or Game Review */}
+            <div className="w-full xl:w-96 flex flex-col gap-4 min-h-[500px]">
+              {activeView === 'analyze' ? (
+                <div className="flex-1 flex flex-col bg-zinc-900 rounded-2xl border-2 border-zinc-800 overflow-hidden shadow-[0_8px_0_0_#09090b]">
+                  <div className="flex bg-zinc-950 border-b-2 border-zinc-800 p-1">
+                    <button
+                      onClick={() => setHistoryView('history')}
+                      className={cn(
+                        "flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all",
+                        historyView === 'history' ? "text-white bg-zinc-900 rounded-xl" : "text-zinc-500 hover:text-white"
+                      )}
+                    >
+                      History
+                    </button>
+                    <button
+                      onClick={() => setHistoryView('review')}
+                      className={cn(
+                        "flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all",
+                        historyView === 'review' ? "text-white bg-zinc-900 rounded-xl" : "text-zinc-500 hover:text-white"
+                      )}
+                    >
+                      Review
+                    </button>
+                  </div>
+                  {historyView === 'history' ? (
+                  <MoveHistory
+                    history={history}
+                    onPreviewMove={setPreviewIndex}
+                    previewIndex={previewIndex}
+                    onExportPgn={exportPgn}
+                    onExportFen={() => navigator.clipboard.writeText(boardFen)}
+                    onOpenSettings={() => setShowSystemCockpit(true)}
+                    onUndo={undoMove}
+                    onResign={() => resetGame()}
+                  />
+                  ) : (
+                    <GameReview />
+                  )}
+                </div>
+              ) : (
+                <MoveHistory
+                  history={history}
+                  onPreviewMove={setPreviewIndex}
+                  previewIndex={previewIndex}
+                  onExportPgn={exportPgn}
+                  onExportFen={() => navigator.clipboard.writeText(boardFen)}
+                  onOpenSettings={() => setShowSystemCockpit(true)}
+                  onUndo={undoMove}
+                  onResign={() => resetGame()}
+                />
+              )}
+            </div>
           </main>
         </div>
       </div>

@@ -14,7 +14,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onSettingsClick 
 }) => {
   return (
-    <div className="flex h-screen bg-zinc-950 overflow-hidden">
+    <div className="flex h-screen bg-zinc-950 overflow-hidden font-sans">
       {/* Left Sidebar */}
       <Sidebar onSettingsClick={onSettingsClick} />
 
@@ -29,8 +29,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
         {/* Right Panel */}
         <aside className={cn(
-          "w-96 bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-xl my-4 mr-4",
-          "border border-white/5 overflow-hidden flex flex-col"
+          "w-96 bg-zinc-900 rounded-2xl shadow-[0_8px_0_0_#09090b] my-4 mr-4",
+          "border-2 border-zinc-800 overflow-hidden flex flex-col"
         )}>
           {rightPanel}
         </aside>

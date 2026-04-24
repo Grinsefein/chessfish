@@ -68,7 +68,7 @@ export function OpeningExplorer({ fen, onMoveSelect }: OpeningExplorerProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-white/5">
+      <div className="p-4 border-b-2 border-2 border-zinc-800">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center">
@@ -79,7 +79,7 @@ export function OpeningExplorer({ fen, onMoveSelect }: OpeningExplorerProps) {
         </div>
 
         {/* Database Toggle */}
-        <div className="flex p-1 rounded-xl bg-zinc-950/50 border border-white/5">
+        <div className="flex p-1 rounded-xl bg-zinc-950/50 border-2 border-zinc-800">
           <button
             onClick={() => setDatabase('lichess')}
             className={cn(
@@ -114,7 +114,7 @@ export function OpeningExplorer({ fen, onMoveSelect }: OpeningExplorerProps) {
             <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
           </div>
         ) : data?.opening ? (
-          <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+          <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-2 border-blue-500/20">
             <p className="text-sm font-bold text-white">{data.opening.name}</p>
             <p className="text-xs text-zinc-400">ECO: {data.opening.eco}</p>
           </div>

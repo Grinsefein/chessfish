@@ -54,9 +54,9 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 gap-0 rounded-2xl border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-2xl p-0 gap-0 rounded-2xl border-2 border-zinc-800 bg-zinc-950 shadow-[0_8px_0_0_#09090b] overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 pb-4 border-b border-zinc-800 bg-zinc-900">
+        <DialogHeader className="p-6 pb-4 border-b-2 border-2 border-zinc-800 bg-zinc-900">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center">
@@ -93,10 +93,10 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
                     "p-3 rounded-xl border-2 transition-all duration-200 text-center relative",
                     selectedBot.id === bot.id
                       ? "bg-zinc-900 border-primary"
-                      : "bg-zinc-950 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900"
+                      : "bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900"
                   )}
                 >
-                  <img src={bot.avatar} alt={bot.name} className="w-10 h-10 mx-auto mb-2 rounded-full border border-zinc-700" />
+                  <img src={bot.avatar} alt={bot.name} className="w-10 h-10 mx-auto mb-2 rounded-full border-2 border-zinc-700" />
                   <div className="text-xs font-bold text-white mb-0.5 uppercase tracking-tight">{bot.name}</div>
                   <div className="text-[10px] font-bold text-zinc-400">{bot.elo} ELO</div>
                 </button>
@@ -104,7 +104,7 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
             </div>
 
             {/* Selected Bot Info Card */}
-            <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800">
+            <div className="p-4 rounded-xl bg-zinc-900 border-2 border-zinc-800">
               <div className="flex items-start gap-4">
                 <img src={selectedBot.avatar} alt={selectedBot.name} className="w-14 h-14 rounded-full border-2 border-zinc-700 bg-zinc-800" />
                 <div className="flex-1">
@@ -121,7 +121,7 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
           </div>
 
           {/* Time Control */}
-          <div className="space-y-4 pt-2 border-t border-zinc-800">
+          <div className="space-y-4 pt-2 border-t-2 border-2 border-zinc-800">
             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
               <Clock size={14} />
               Time Control
@@ -164,7 +164,7 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
             </div>
 
             {/* Time Display */}
-            <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-center mt-4">
+            <div className="p-3 rounded-xl bg-zinc-900 border-2 border-zinc-800 text-center mt-4">
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Selected Time Control</span>
               <div className="text-xl font-bold text-white mt-0.5">
                 {getTimeDisplay(minutes, increment)}
