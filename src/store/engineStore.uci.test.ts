@@ -13,10 +13,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('UCI Protocol', () => {
   let mockWorker: {
-    postMessage: ReturnType<typeof vi.fn>;
+    postMessage: (msg: string) => void;
     onmessage: ((e: { data: string }) => void) | null;
     onerror: ((e: ErrorEvent) => void) | null;
-    terminate: ReturnType<typeof vi.fn>;
+    terminate: () => void;
   };
   
   let messageLog: Array<{ type: 'sent' | 'received'; message: string }>;

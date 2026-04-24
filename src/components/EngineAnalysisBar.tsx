@@ -36,8 +36,14 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
     startAnalysis, 
     stopAnalysis,
     energySavingMode,
-    selectedEngine
+    selectedEngine,
+    selectedEngineVersion,
+    cloudRuntime
   } = engineStore;
+
+  const engineBadge = selectedEngine === 'cloud'
+    ? `${cloudRuntime.engineVersion.toUpperCase()} CLOUD`
+    : `${selectedEngineVersion.toUpperCase()} LOCAL`;
 
   // Format big numbers
   const formatNumber = (num: number) => {
@@ -105,7 +111,7 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
               ? "bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]" 
               : "bg-purple-500/10 text-purple-400 border-purple-500/20"
           )}>
-            {selectedEngine === 'cloud' ? 'Pro Cloud' : 'Local'}
+            {engineBadge}
           </div>
           
           <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
@@ -214,7 +220,7 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
               {/* Best indicator */}
               {index === 0 && (
                 <div className="flex items-center gap-1.5 lg:gap-2 px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-xl bg-primary/10 border border-primary/20 shrink-0 hidden sm:flex">
-                  <Sparkles size={10} lg:size={14} className="text-primary animate-pulse" />
+                  <Sparkles size={14} className="text-primary animate-pulse" />
                   <span className="text-[9px] lg:text-[11px] font-black text-primary uppercase tracking-wider">Best</span>
                 </div>
               )}

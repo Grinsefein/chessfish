@@ -45,8 +45,8 @@ export const OpeningStats: React.FC<OpeningStatsProps> = ({ userId }) => {
     ]);
     
     setStats(activeTab === 'white' ? whiteStats as OpeningStat[] : blackStats as OpeningStat[]);
-    setProblems(problemStats);
-    setBest(bestStats);
+    setProblems(problemStats as OpeningStat[]);
+    setBest(bestStats as OpeningStat[]);
     setIsLoading(false);
   };
 

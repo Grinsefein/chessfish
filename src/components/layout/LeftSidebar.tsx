@@ -41,9 +41,15 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const {
     status,
     selectedEngine,
+    selectedEngineVersion,
+    cloudRuntime,
     threads,
     hashSize,
   } = engineStore;
+
+  const engineLabel = selectedEngine === 'cloud'
+    ? `${cloudRuntime.engineVersion} • ${threads}T • ${hashSize}MB`
+    : `${selectedEngineVersion} • ${threads}T • ${hashSize}MB`;
 
   const NavItem = ({ 
     icon: Icon, 
@@ -143,7 +149,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               </div>
               
               <div className="text-[10px] font-black text-zinc-600 mb-5 uppercase tracking-wider">
-                {selectedEngine === 'cloud' ? 'Cloud' : 'Local'} • {threads}T • {hashSize}MB
+                {selectedEngine === 'cloud' ? `Cloud • ${engineLabel}` : `Local • ${engineLabel}`}
               </div>
 
               <Button 

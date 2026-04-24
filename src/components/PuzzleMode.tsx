@@ -5,6 +5,8 @@ import { Brain, RotateCcw, CheckCircle2, XCircle, ArrowRight, Trophy, Target } f
 import { cn } from '@/lib/utils';
 import { getDuePuzzles, recordPuzzleResult, getPuzzleStats } from '@/services/puzzleGenerator';
 
+const RuntimeChessboard = Chessboard as any;
+
 interface PuzzleModeProps {
   userId?: string;
 }
@@ -186,7 +188,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ userId }) => {
       {/* Board */}
       <div className="flex-1 p-2 lg:p-4 flex items-center justify-center bg-zinc-950">
         <div className="w-full max-w-md aspect-square rounded-xl overflow-hidden border-4 border-zinc-800 shadow-2xl">
-          <Chessboard
+          <RuntimeChessboard
             position={game.fen()}
             onPieceDrop={onPieceDrop}
             boardWidth={boardWidth}
