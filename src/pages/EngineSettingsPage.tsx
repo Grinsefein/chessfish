@@ -7,11 +7,13 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { 
-  Cpu, 
-  Sparkles,
+  Settings2,
   Play,
   Square,
-  ArrowLeft
+  ArrowLeft,
+  Server,
+  SlidersHorizontal,
+  Cpu
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -102,8 +104,8 @@ export default function EngineSettingsPage() {
           <div className="lg:hidden w-full border-b-2 border-zinc-800 bg-zinc-950 p-1.5 shrink-0">
             <TabsList className="flex h-auto bg-transparent gap-1.5 w-full border-0 shadow-none p-0">
               {[
-                { value: 'config', icon: Sparkles, label: 'Config' },
-                { value: 'backend', icon: Cpu, label: 'Backend' },
+                { value: 'config', icon: SlidersHorizontal, label: 'Config' },
+                { value: 'backend', icon: Server, label: 'Backend' },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -118,25 +120,84 @@ export default function EngineSettingsPage() {
           </div>
 
           {/* Sidebar Navigation - Desktop */}
-          <div className="hidden lg:block w-80 border-r-2 border-zinc-800 bg-zinc-950 p-6 shrink-0 overflow-y-auto">
-            <div className="mb-8">
-              <h2 className="text-xs font-black text-zinc-600 uppercase tracking-[0.2em] mb-4">Settings</h2>
+          <div className="hidden lg:flex w-96 border-r-2 border-zinc-800 bg-zinc-950 flex-col shrink-0">
+            {/* Header Section */}
+            <div className="p-6 border-b-2 border-zinc-800">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
+                  <Settings2 className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-white uppercase tracking-wider">Engine Settings</h2>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide">Configuration Panel</p>
+                </div>
+              </div>
             </div>
-            <TabsList className="flex flex-col h-auto bg-transparent gap-3 w-full border-0 shadow-none p-0">
-              {[
-                { value: 'config', icon: Sparkles, label: 'Configuration' },
-                { value: 'backend', icon: Cpu, label: 'Backend' },
-              ].map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="w-full justify-start gap-4 px-6 py-4 h-auto data-[state=active]:bg-primary rounded-xl text-zinc-500 data-[state=active]:text-white data-[state=active]:shadow-[0_4px_0_0_#4a6728] text-sm font-black transition-all active:translate-y-[2px] active:shadow-none text-left uppercase tracking-wider border-2 border-transparent data-[state=active]:border-primary"
-                >
-                  <tab.icon size={20} className="shrink-0" />
-                  <span className="flex-1 truncate">{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+
+            {/* Navigation Items */}
+            <div className="flex-1 p-5 overflow-y-auto">
+              <TabsList className="flex flex-col h-auto bg-transparent gap-3 w-full border-0 shadow-none p-0">
+                {[
+                  {
+                    value: 'config',
+                    icon: SlidersHorizontal,
+                    label: 'Configuration',
+                    description: 'Version, threads, memory & analysis'
+                  },
+                  {
+                    value: 'backend',
+                    icon: Server,
+                    label: 'Backend',
+                    description: 'Cloud engine status & logs'
+                  },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className={cn(
+                      "w-full justify-start gap-3 px-4 py-4 h-auto rounded-xl text-left transition-all duration-200",
+                      "border-2 border-transparent data-[state=active]:border-primary",
+                      "data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-[0_4px_0_0_#4a6728]",
+                      "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900",
+                      "data-[state=active]:hover:bg-primary data-[state=active]:hover:text-white"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                      "bg-zinc-900 data-[state=active]:bg-white/20"
+                    )}>
+                      <tab.icon size={20} className="shrink-0" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-black uppercase tracking-wide">{tab.label}</div>
+                      <div className="text-[10px] text-zinc-500 data-[state=active]:text-white/70 font-bold uppercase tracking-wide truncate">
+                        {tab.description}
+                      </div>
+                    </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            {/* Status Footer */}
+            <div className="p-5 border-t-2 border-zinc-800">
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                <div className={cn(
+                  "w-2.5 h-2.5 rounded-full shrink-0",
+                  status === 'ready' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
+                  status === 'booting' ? 'bg-amber-500 animate-pulse' :
+                  status === 'error' ? 'bg-red-500' : 'bg-zinc-600'
+                )} />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-black text-zinc-300 uppercase tracking-wide truncate">
+                    {status === 'ready' ? 'Engine Online' : status === 'booting' ? 'Connecting...' : status === 'error' ? 'Connection Error' : 'Engine Offline'}
+                  </div>
+                  <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide truncate">
+                    {cloudRuntime.engineVersion}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Content Area */}
@@ -314,7 +375,7 @@ export default function EngineSettingsPage() {
                   <div className="p-3 sm:p-6 h-48 sm:h-64 overflow-y-auto custom-scrollbar">
                     {commandLogs.length === 0 ? (
                       <div className="text-zinc-600 text-sm font-mono">
-                        {selectedEngine === 'cloud' ? 'No shared backend output yet.' : 'No local output yet. Boot the engine to see command logs.'}
+                        {selectedEngine === 'cloud' ? 'No logs yet.' : 'No local output yet. Boot the engine to see command logs.'}
                       </div>
                     ) : (
                       <div className="space-y-1">

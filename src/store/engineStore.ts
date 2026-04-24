@@ -418,6 +418,11 @@ export const useEngineStore = create<EngineState>()(
       init: () => {
         const { selectedEngine, socket, worker, status } = get();
 
+        if (selectedEngine !== 'cloud') {
+          get().selectEngine('cloud');
+          return;
+        }
+
         if (selectedEngine === 'cloud') {
           get().connectCloudEngine();
           get().refreshCloudSnapshot();
