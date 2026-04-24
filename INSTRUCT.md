@@ -109,3 +109,84 @@ Eröffnungen
 --- OPTIONAL
 GM-Partien
 - werden gefechted und analysiert
+
+
+
+
+👑 Das offizielle "Chessfish" Master-Einstellungsmenü
+
+(Gedacht als großes Dialog-Overlay mit linker, seitlicher Navigation)
+🎨 1. Brett-Designs & Allgemeines (Board & General)
+
+    Design-Themen: Farbe für dunkle/helle Felder wählen.
+    Sprache: (Deutsch, Englisch, etc.).
+    Benutzername festlegen: (Gleicher Name wie auf Chess.com/Lichess ➡️ App dreht beim Analysieren automatisch das Brett für dich nach unten).
+🎮 2. Spieleinstellungen (Play Mode Settings)
+    Zen-Modus / Fokus: Menüs und Notationen während des Spiels gegen den Bot ausblenden (nur Brett und Uhr).
+    Vorzug (Premove) aktivieren: Ermöglicht es, Züge schon auszuführen, während die Engine noch nachdenkt.
+    Bedrohungen während des Spiels: Erlaubt das Anzeigen von Warnungen während der laufenden Partie.
+    Bewertungsleiste: Anzeigen / Ausblenden.
+    Pause bei Patzer (??): Partieuhr / Engine-Gegner stoppt, gibt dir die Chance zur Fehler-Rücknahme (Duolingo-Gamification).
+    Pause bei Fehler (?): Partieuhr stoppt bei normalen Fehlern.
+    Elo / Zugstärke einblenden: Bewertet deinen gespielten Zug visuell direkt auf dem Brett.
+    Gegner-Zugstärke einblenden: Bewertet den vom Bot gezogenen Zug.
+
+⚙️ 3. Engine- & Hardware-Verwaltung (Engine Cockpit)
+    Engine auswählen: Dropdown für (Stockfish 18, Stockfish 16, Stockfish 14, etc.). Hier sitzt auch der "Boot/Connect Engine" Button.
+    NNUE verwenden: Ein/Ausschalten der neuronalen Netz-Evaluierung (falls alte PC-Geräte sonst zu heiß werden).
+    Threads (Kerne): Schieberegler 1 bis max. (hängt vom Cloud-Server ab).
+    Hash-Speicher (MB): Ram-Zuweisung für die Analyse.
+    Engine immer aktiv: Die Engine analysiert die aktuelle Stellung stumm im Hintergrund weiter.
+    Multi-PV Standard: Standardanzahl der berechneten Linien (1-5).
+    Syzygy Endspiel-Datenbanken: Wenn 6 oder weniger Figuren auf dem Brett sind, fragt die Engine perfekte Lösungsdatenbanken über eine API ab, statt endlos selbst zu rechnen.
+
+🔬 4. Analyse & Spielbericht (Analysis & Reports)
+    Schnellbericht: Radiobuttons (Nach Zeit oder Nach Tiefe analysieren). Max-Eingabefeld (z.B. Tiefe 12).
+    Ausführlich (Pro-Review): Radiobuttons (Zeit / Tiefe). Max-Eingabefeld (z.B. Tiefe 20).
+    Intelligente Analyse: Passt Analysetiefe pro Stellung an (geht in krass komplexen Momenten tiefer in die Rechenleistung, sprintet durch klare Eröffnungszüge).
+    CPL im Bericht anzeigen: Centipawn-Loss als genauen Zahlenwert im Profil auflisten.
+
+🛡️ 5. Drohungen (Threat Overlay Settings)
+
+Globale Master-Toggles: Beim Spielen an / Bei Analyse an.
+    Pfeil & Linien Option: Drohungspfeile (Linien über das ganze Brett ziehen) UND/ODER Bedrohtes Zielfeld mit roter, gestrichelter Umrandung versehen.
+    Indikator-Toggles:
+        Ungedeckte Figuren (Rote Randung).
+        Mattdrohung (Kreis oder Raute auf dem Feld).
+        Taktische Drohung / Engine Bestzug-Drohung (Glow oder Stern-Rahmen).
+        Abzugsangriffe.
+        Stark gedeckt (Grün) / Schwach gedeckt (Gelb).
+        Bauernschwächen / Freibauern.
+    Farbe für Pfeile wählen: Palette öffnet sich zur manuellen Anpassung.
+
+🗝️ 6. Schlüsselelemente (Key Concept Insights)
+
+Diese zeigen auf den Eck-Indikatoren ("Schild", "Nadel") fundamentale strategische Elemente an.
+    Toggles für Elemente:
+        Gefesselte Figur (Pinnadel-Icon).
+        Schachbarer König (+ Icon auf dem gegnerischen König, falls direkter Schach-Pfad existiert).
+        Figur in Gefahr/Ungedeckt (Geplatztes Schild).
+        Rückständiger Bauer (mittelkleiner roter Punkt rechts über dem Bauern).
+        Isolierter Bauer (Orange Punkt).
+        Freibauer (Grüner Punkt).
+        Figurenmobilität (Kleines "%"-Schild oder Thermometer neben Figuren, die völlig eingekesselt sind).
+
+🪚 7. Optik & Erweitertes Layout (Visuals & Flow)
+    Figurenanimation: Geschwindigkeits-Toggle (Slow / Normal / Fast).
+    Figur bei Drag vergrößern: Toggle. Wenn man eine Figur mit Maus/Finger hochhebt, wächst sie leicht, damit man die Feldsicht darunter behält.
+    Manuelle Markierungen: Rechtsklick-Drag zeichnet grüne Pfeile/Felder. (Blockiert kurzes Bewegen, solange gedrückt).
+    Automatisches Einfärben:
+        Pfeilfarben folgen Bewertungsstärke (Grün=Stark, Orange/Rot=Mäßig/Verlust).
+        Der VORHERIGE Top-Zug als transparenter, matter Geist (Zeigt den verpassten besten Weg an!).
+        Der JETZT letzte gespielte Zug ändert die gelbe Ursprungs-Brett-Farbe entsprechend der Duolingo-Badge-Farbe (Rot/Blunder, Grün/Gespielt, Blau/Genauigkeit).
+    Figurine Notation: Schreibt man Springer = "S" / "N", oder benutzt die App hübsche
+    Unicode/SVGs (♘/♞).
+    Züge vertikal scrollen: PGN auf schmalen Monitoren stapeln.
+    Legal Dots: Diese winzigen transparent-grauen Punkte, wohin du legal ziehen kannst, wenn eine Figur ausgewählt ist.
+
+🔉 8. Audio (Sound & Feel)
+    Global Sound an/aus.
+    Puff-/Klack-Sound für Bewegung & Schlagen.
+    Alarm-Ton (Bass / Warn-Schall) für ein gespieltes SCHACH (+).
+    Duolingo-Pling beim Klicken der Buttons & Fehlererkennung.
+    Spiel-Teilen / Partien-Export-Button (Hier als globale Tools integriert).

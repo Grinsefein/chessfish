@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useGameStore } from "@/store/gameStore";
-import { useEngineStore } from "@/store/engineStore";
+import { useEngineStore, BOARD_THEMES } from "@/store/engineStore";
 import { usePerformanceScaling } from "@/hooks/usePerformanceScaling";
 import { BOTS } from "@/lib/bots";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import { PGNUpload } from "@/components/PGNUpload";
 import { PuzzleMode } from "@/components/PuzzleMode";
 import { OpeningStats } from "@/components/OpeningStats";
 import { ClassificationBadge } from "@/components/ClassificationBadge";
-import EngineSettingsPage from "@/pages/EngineSettingsPage";
+import SettingsPage from "@/pages/SettingsPage";
 
 import { Chess, type Square } from 'chess.js';
 import { Chessboard } from "react-chessboard";
@@ -60,7 +60,11 @@ function ChessApp() {
     selectedEngine,
     activeView,
     setActiveView,
-    drawArrows
+    drawArrows,
+    boardTheme,
+    animationSpeed,
+    showEvalBar,
+    showLegalDots,
   } = engineStore;
 
   useEffect(() => {
@@ -95,12 +99,14 @@ function ChessApp() {
   const boardFen = previewFen || fen;
   const game = useMemo(() => new Chess(boardFen), [boardFen]);
 
-  // Auto-boot engine on mount
+  // Auto-boot engine on mount (only if user hasn't manually shut it down)
+  const userShutdown = useEngineStore((state) => state.userShutdown);
+  
   useEffect(() => {
-    if (selectedEngine === 'cloud' && engineStatus === 'offline') {
+    if (selectedEngine === 'cloud' && engineStatus === 'offline' && !userShutdown) {
       bootEngine();
     }
-  }, [bootEngine, engineStatus, selectedEngine]);
+  }, [bootEngine, engineStatus, selectedEngine, userShutdown]);
 
   // Bot logic
   useEffect(() => {
@@ -130,11 +136,11 @@ function ChessApp() {
           // Bot's turn but no best move yet, start analysis
           analyzePosition(fen);
         }
-      } else if (selectedEngine === 'cloud' && engineStatus === 'offline') {
+      } else if (selectedEngine === 'cloud' && engineStatus === 'offline' && !userShutdown) {
         bootEngine();
       }
     }
-  }, [turn, activeView, isGameOver, engineBestMove, engineStatus, isAnalyzing, makeGameMove, selectedBot, getDifficultyAdjustment, analyzePosition, bootEngine, fen, previewIndex, resetEngineAnalysis, selectedEngine]);
+  }, [turn, activeView, isGameOver, engineBestMove, engineStatus, isAnalyzing, makeGameMove, selectedBot, getDifficultyAdjustment, analyzePosition, bootEngine, fen, previewIndex, resetEngineAnalysis, selectedEngine, userShutdown]);
 
   // Analysis mode - trigger engine when in analyze view
   useEffect(() => {
@@ -215,9 +221,10 @@ function ChessApp() {
   // Board Options Configuration
   const boardOptions = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
+    const theme = BOARD_THEMES[boardTheme];
     
     // Highlight legal moves (pre-move feature) - show as dots when piece selected
-    if (selectedSquare) {
+    if (selectedSquare && showLegalDots) {
       try {
         const moves = game.moves({ square: selectedSquare as Square, verbose: true });
         moves.forEach((move) => {
@@ -297,15 +304,17 @@ function ChessApp() {
       }
     }
 
+    const animationMs = animationSpeed === 'slow' ? 400 : animationSpeed === 'fast' ? 100 : 200;
+
     return {
       position: boardFen,
       boardOrientation: boardOrientation,
-      animationDurationInMs: 200,
+      animationDurationInMs: animationMs,
       allowDragging: previewIndex === null && (activeView === 'analyze' || turn === 'w'),
       squareStyles: styles,
       customArrows: arrows,
-      darkSquareStyle: { backgroundColor: 'hsla(94, 25%, 35%, 1)' },
-      lightSquareStyle: { backgroundColor: 'hsla(60, 25%, 92%, 1)' },
+      darkSquareStyle: { backgroundColor: theme.dark },
+      lightSquareStyle: { backgroundColor: theme.light },
       dropOffBoard: 'snapback' as const,
       roughSquare: ({ squareElement }: { squareElement: HTMLElement }) => {
         squareElement.style.transition = 'all 0.15s ease-out';
@@ -359,7 +368,7 @@ function ChessApp() {
         setSelectedSquare(square);
       }
     };
-  }, [boardFen, turn, previewIndex, activeView, lastMove, selectedSquare, game, makeGameMove, engineLines, drawArrows]);
+  }, [boardFen, turn, previewIndex, activeView, lastMove, selectedSquare, game, makeGameMove, engineLines, drawArrows, boardTheme, animationSpeed, showLegalDots]);
 
   const evalPercentage = useMemo(() => {
     if (engineLines[0]?.isMate) {
@@ -412,22 +421,14 @@ function ChessApp() {
           ]}
         />
         
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar pb-16 lg:pb-0 lg:pt-0 md:pt-14">
+        <div className="flex-1 flex flex-col overflow-hidden lg:overflow-hidden pb-16 lg:pb-0 lg:pt-0 md:pt-14">
           {/* Header - Hidden on tablet (handled by LeftSidebar) */}
           <header className="hidden md:hidden lg:flex w-full h-14 px-4 lg:px-8 items-center justify-between border-b-2 border-zinc-900 bg-zinc-950 shrink-0">
             <div className="flex items-center gap-2 lg:gap-4">
-              <div className="hidden sm:flex bg-zinc-900 p-1 rounded-lg border-2 border-zinc-800">
-                <button className="flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-white transition-all">
-                  <Monitor size={14} /> Local
-                </button>
-                <button className="flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:text-white transition-all">
-                  <Cloud size={14} /> Cloud
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={cn("w-1.5 h-1.5 rounded-full", engineStatus === 'ready' ? "bg-green-500" : "bg-zinc-500")} />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest hidden sm:block">
-                  {engineStatus === 'ready' ? 'Ready' : 'Offline'}
+              <div className="flex items-center gap-2.5 px-4 py-2 rounded-lg border-2 border-zinc-800 bg-zinc-900">
+                <div className={cn("w-2 h-2 rounded-full", engineStatus === 'ready' ? "bg-green-500 animate-pulse" : "bg-zinc-600")} />
+                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                  {engineStatus === 'ready' ? 'Engine Online' : 'Engine Offline'}
                 </span>
               </div>
             </div>
@@ -463,6 +464,7 @@ function ChessApp() {
             <div className="flex-1 max-w-[640px] w-full flex flex-col gap-3 lg:gap-4 self-center xl:self-start">
               <div className="flex w-full items-stretch">
                 {/* Eval Bar - attached seamlessly to the board */}
+                {showEvalBar && (
                 <div className="hidden lg:flex w-5 lg:w-6 bg-zinc-900 rounded-l-2xl border-y-[12px] border-l-[12px] border-zinc-900 overflow-hidden flex-col-reverse relative shrink-0">
                   {/* White advantage area (top) */}
                   <motion.div 
@@ -509,6 +511,7 @@ function ChessApp() {
                     </span>
                   </motion.div>
                 </div>
+                )}
 
                 {/* Board Area */}
                 <div className="flex-1 relative">
@@ -571,7 +574,7 @@ function ChessApp() {
                       <Upload className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-white">Upload PGN</h3>
+                      <h3 className="font-bold bg-gradient-to-r from-primary via-green-400 to-white bg-clip-text text-transparent">Upload PGN</h3>
                       <p className="text-xs text-zinc-500">Analyze your games in batch</p>
                     </div>
                   </div>
@@ -668,7 +671,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<ChessApp />} />
-        <Route path="/settings" element={<EngineSettingsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </BrowserRouter>
   );

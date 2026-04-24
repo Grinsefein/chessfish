@@ -80,7 +80,7 @@ export const GameReview: React.FC<GameReviewProps> = ({
           <Trophy className="text-zinc-600" size={32} />
         </div>
         <div className="space-y-1">
-          <h3 className="text-sm font-black text-white uppercase tracking-tight">Game Review</h3>
+          <h3 className="text-sm font-black bg-gradient-to-r from-primary via-green-400 to-white bg-clip-text text-transparent uppercase tracking-tight">Game Review</h3>
           <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-relaxed">
             Finish the game to see your accuracy and move classifications
           </p>

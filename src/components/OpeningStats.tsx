@@ -92,7 +92,7 @@ export const OpeningStats: React.FC<OpeningStatsProps> = ({ userId }) => {
             <BookOpen className="w-4 h-4 lg:w-5 lg:h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-sm lg:text-base">Opening Repertoire</h3>
+            <h3 className="font-bold bg-gradient-to-r from-primary via-green-400 to-white bg-clip-text text-transparent text-sm lg:text-base">Opening Repertoire</h3>
             <p className="text-[10px] lg:text-xs text-zinc-500">Track your performance by opening</p>
           </div>
         </div>

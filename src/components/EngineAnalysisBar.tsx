@@ -168,10 +168,10 @@ export const EngineAnalysisBar: React.FC<EngineAnalysisBarProps> = ({
         </div>
       </div>
 
-      {/* Multi-PV Lines - Condensed */}
+      {/* Multi-PV Lines - Scrollable container */}
       {lines.length > 0 && (
-        <div className="space-y-1.5">
-          {lines.slice(0, 3).map((line, index) => (
+        <div className="space-y-1.5 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
+          {lines.map((line, index) => (
             <button
               key={index}
               className={cn(

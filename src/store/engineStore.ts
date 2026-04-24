@@ -8,6 +8,34 @@ export type EngineVersion = 'stockfish-13' | 'stockfish-14' | 'stockfish-16' | '
 export type AnalysisMode = 'depth' | 'time';
 export type AnimationSpeed = 'slow' | 'default' | 'fast';
 export type ActiveView = 'play' | 'analyze' | 'import' | 'upload' | 'explorer';
+export type BoardTheme = 'green' | 'blue' | 'brown' | 'purple' | 'black' | 'beach' | 'winter' | 'clash' | 'mario' | 'forest' | 'cherry' | 'ocean' | 'sunset';
+export type Language = 'de' | 'en';
+export type ReportMode = 'depth' | 'time';
+
+export interface BoardColors {
+  light: string;
+  dark: string;
+  name: string;
+  icon: string;
+}
+
+export const BOARD_THEMES: Record<BoardTheme, BoardColors> = {
+  // Classic themes
+  green: { light: 'hsla(60, 25%, 92%, 1)', dark: 'hsla(94, 25%, 35%, 1)', name: 'Classic Green', icon: '🌿' },
+  blue: { light: 'hsla(210, 30%, 92%, 1)', dark: 'hsla(210, 35%, 40%, 1)', name: 'Ice Blue', icon: '❄️' },
+  brown: { light: 'hsla(40, 30%, 88%, 1)', dark: 'hsla(30, 40%, 35%, 1)', name: 'Wood', icon: '🪵' },
+  purple: { light: 'hsla(260, 25%, 92%, 1)', dark: 'hsla(260, 30%, 40%, 1)', name: 'Royal', icon: '👑' },
+  black: { light: 'hsla(0, 0%, 75%, 1)', dark: 'hsla(0, 0%, 25%, 1)', name: 'Monochrome', icon: '⚫' },
+  // Fun themes
+  beach: { light: 'hsla(50, 80%, 85%, 1)', dark: 'hsla(25, 70%, 55%, 1)', name: 'Beach', icon: '🏖️' },
+  winter: { light: 'hsla(200, 30%, 95%, 1)', dark: 'hsla(200, 50%, 45%, 1)', name: 'Winter', icon: '⛄' },
+  clash: { light: 'hsla(45, 30%, 75%, 1)', dark: 'hsla(200, 60%, 35%, 1)', name: 'Arena', icon: '⚔️' },
+  mario: { light: 'hsla(0, 80%, 75%, 1)', dark: 'hsla(120, 60%, 40%, 1)', name: 'Mushroom', icon: '🍄' },
+  forest: { light: 'hsla(100, 40%, 85%, 1)', dark: 'hsla(140, 50%, 25%, 1)', name: 'Forest', icon: '🌲' },
+  cherry: { light: 'hsla(350, 60%, 90%, 1)', dark: 'hsla(340, 70%, 40%, 1)', name: 'Cherry', icon: '🌸' },
+  ocean: { light: 'hsla(190, 50%, 90%, 1)', dark: 'hsla(200, 70%, 40%, 1)', name: 'Ocean', icon: '🌊' },
+  sunset: { light: 'hsla(30, 80%, 75%, 1)', dark: 'hsla(280, 60%, 40%, 1)', name: 'Sunset', icon: '🌅' },
+};
 
 interface EngineConfig {
   id: EngineType;
@@ -160,6 +188,55 @@ interface EngineState {
   showIsolatedPawns: boolean;
   showPassedPawns: boolean;
   activeView: ActiveView;
+  // Board & General
+  boardTheme: BoardTheme;
+  language: Language;
+  username: string;
+  // Game Settings
+  zenMode: boolean;
+  premoveEnabled: boolean;
+  showThreatsInPlay: boolean;
+  showEvalBar: boolean;
+  pauseOnBlunder: boolean;
+  pauseOnMistake: boolean;
+  showMoveStrength: boolean;
+  showOpponentMoveStrength: boolean;
+  // Threat Settings
+  showThreatsInAnalysis: boolean;
+  showMateThreat: boolean;
+  showTacticalThreat: boolean;
+  showAttackingMoves: boolean;
+  showStronglyDefended: boolean;
+  showWeaklyDefended: boolean;
+  showPawnWeaknesses: boolean;
+  arrowColor: string;
+  showThreatArrows: boolean;
+  markThreatenedSquares: boolean;
+  // Key Elements
+  showKeyElementsInPlay: boolean;
+  showKeyElementsInAnalysis: boolean;
+  showBackwardPawns: boolean;
+  // Analysis Reports
+  quickReportMode: ReportMode;
+  quickReportValue: number;
+  deepReportMode: ReportMode;
+  deepReportValue: number;
+  intelligentAnalysis: boolean;
+  showCPL: boolean;
+  // Visuals
+  manualArrowsEnabled: boolean;
+  showPreviousBestMove: boolean;
+  colorLastMoveByStrength: boolean;
+  verticalMovesOnMobile: boolean;
+  showLegalDots: boolean;
+  autoFlipBoard: boolean;
+  pieceStyle: 'standard' | 'neo' | 'classic';
+  // Audio
+  moveSoundEnabled: boolean;
+  checkAlarmEnabled: boolean;
+  uiSoundsEnabled: boolean;
+  userShutdown: boolean;
+  // Setters
   init: () => void;
   selectEngine: (engine: EngineType) => void;
   setStatus: (status: EngineStatus, message?: string) => void;
@@ -208,6 +285,46 @@ interface EngineState {
   setShowIsolatedPawns: (enabled: boolean) => void;
   setShowPassedPawns: (enabled: boolean) => void;
   setActiveView: (view: ActiveView) => void;
+  setBoardTheme: (theme: BoardTheme) => void;
+  setLanguage: (lang: Language) => void;
+  setUsername: (name: string) => void;
+  setZenMode: (enabled: boolean) => void;
+  setPremoveEnabled: (enabled: boolean) => void;
+  setShowThreatsInPlay: (enabled: boolean) => void;
+  setShowEvalBar: (enabled: boolean) => void;
+  setPauseOnBlunder: (enabled: boolean) => void;
+  setPauseOnMistake: (enabled: boolean) => void;
+  setShowMoveStrength: (enabled: boolean) => void;
+  setShowOpponentMoveStrength: (enabled: boolean) => void;
+  setShowThreatsInAnalysis: (enabled: boolean) => void;
+  setShowMateThreat: (enabled: boolean) => void;
+  setShowTacticalThreat: (enabled: boolean) => void;
+  setShowAttackingMoves: (enabled: boolean) => void;
+  setShowStronglyDefended: (enabled: boolean) => void;
+  setShowWeaklyDefended: (enabled: boolean) => void;
+  setShowPawnWeaknesses: (enabled: boolean) => void;
+  setArrowColor: (color: string) => void;
+  setShowThreatArrows: (enabled: boolean) => void;
+  setMarkThreatenedSquares: (enabled: boolean) => void;
+  setShowKeyElementsInPlay: (enabled: boolean) => void;
+  setShowKeyElementsInAnalysis: (enabled: boolean) => void;
+  setShowBackwardPawns: (enabled: boolean) => void;
+  setQuickReportMode: (mode: ReportMode) => void;
+  setQuickReportValue: (value: number) => void;
+  setDeepReportMode: (mode: ReportMode) => void;
+  setDeepReportValue: (value: number) => void;
+  setIntelligentAnalysis: (enabled: boolean) => void;
+  setShowCPL: (enabled: boolean) => void;
+  setManualArrowsEnabled: (enabled: boolean) => void;
+  setShowPreviousBestMove: (enabled: boolean) => void;
+  setColorLastMoveByStrength: (enabled: boolean) => void;
+  setVerticalMovesOnMobile: (enabled: boolean) => void;
+  setShowLegalDots: (enabled: boolean) => void;
+  setAutoFlipBoard: (enabled: boolean) => void;
+  setPieceStyle: (style: 'standard' | 'neo' | 'classic') => void;
+  setMoveSoundEnabled: (enabled: boolean) => void;
+  setCheckAlarmEnabled: (enabled: boolean) => void;
+  setUiSoundsEnabled: (enabled: boolean) => void;
 }
 
 const appendUniqueLog = (logs: string[], nextLog: string) => {
@@ -415,6 +532,7 @@ export const useEngineStore = create<EngineState>()(
       cloudRuntime: defaultCloudRuntime,
       isRefreshingSnapshot: false,
       lastHydratedAt: null,
+      userShutdown: false,
       commandLogs: [],
       isAnalyzing: false,
       currentEvaluation: 0,
@@ -447,6 +565,53 @@ export const useEngineStore = create<EngineState>()(
       showIsolatedPawns: false,
       showPassedPawns: false,
       activeView: 'play',
+      // Board & General defaults
+      boardTheme: 'green',
+      language: 'en',
+      username: '',
+      // Game Settings defaults
+      zenMode: false,
+      premoveEnabled: true,
+      showThreatsInPlay: false,
+      showEvalBar: true,
+      pauseOnBlunder: false,
+      pauseOnMistake: false,
+      showMoveStrength: false,
+      showOpponentMoveStrength: false,
+      // Threat Settings defaults
+      showThreatsInAnalysis: true,
+      showMateThreat: true,
+      showTacticalThreat: true,
+      showAttackingMoves: false,
+      showStronglyDefended: false,
+      showWeaklyDefended: false,
+      showPawnWeaknesses: false,
+      arrowColor: '#ef4444',
+      showThreatArrows: true,
+      markThreatenedSquares: false,
+      // Key Elements defaults
+      showKeyElementsInPlay: false,
+      showKeyElementsInAnalysis: true,
+      showBackwardPawns: false,
+      // Analysis Reports defaults
+      quickReportMode: 'depth',
+      quickReportValue: 12,
+      deepReportMode: 'depth',
+      deepReportValue: 20,
+      intelligentAnalysis: false,
+      showCPL: true,
+      // Visuals defaults
+      manualArrowsEnabled: false,
+      showPreviousBestMove: false,
+      colorLastMoveByStrength: false,
+      verticalMovesOnMobile: true,
+      showLegalDots: true,
+      autoFlipBoard: false,
+      pieceStyle: 'standard',
+      // Audio defaults
+      moveSoundEnabled: true,
+      checkAlarmEnabled: true,
+      uiSoundsEnabled: true,
 
       init: () => {
         const { selectedEngine, socket, worker, status } = get();
@@ -618,6 +783,7 @@ export const useEngineStore = create<EngineState>()(
           set({
             status: 'booting',
             statusMessage: 'Requesting backend engine activation...',
+            userShutdown: false,
             ...resetAnalysisState,
           });
 
@@ -774,6 +940,7 @@ export const useEngineStore = create<EngineState>()(
           }
           set({
             isAnalyzing: false,
+            userShutdown: true,
             ...resetAnalysisState,
           });
           return;
@@ -792,6 +959,7 @@ export const useEngineStore = create<EngineState>()(
           worker: null,
           status: 'offline',
           statusMessage: 'Engine shutdown',
+          userShutdown: true,
           commandLogs: [],
           ...resetAnalysisState,
         });
@@ -994,6 +1162,53 @@ export const useEngineStore = create<EngineState>()(
       setShowIsolatedPawns: (enabled) => set({ showIsolatedPawns: enabled }),
       setShowPassedPawns: (enabled) => set({ showPassedPawns: enabled }),
       setActiveView: (view) => set({ activeView: view }),
+      // Board & General setters
+      setBoardTheme: (theme) => set({ boardTheme: theme }),
+      setLanguage: (lang) => set({ language: lang }),
+      setUsername: (name) => set({ username: name }),
+      // Game Settings setters
+      setZenMode: (enabled) => set({ zenMode: enabled }),
+      setPremoveEnabled: (enabled) => set({ premoveEnabled: enabled }),
+      setShowThreatsInPlay: (enabled) => set({ showThreatsInPlay: enabled }),
+      setShowEvalBar: (enabled) => set({ showEvalBar: enabled }),
+      setPauseOnBlunder: (enabled) => set({ pauseOnBlunder: enabled }),
+      setPauseOnMistake: (enabled) => set({ pauseOnMistake: enabled }),
+      setShowMoveStrength: (enabled) => set({ showMoveStrength: enabled }),
+      setShowOpponentMoveStrength: (enabled) => set({ showOpponentMoveStrength: enabled }),
+      // Threat Settings setters
+      setShowThreatsInAnalysis: (enabled) => set({ showThreatsInAnalysis: enabled }),
+      setShowMateThreat: (enabled) => set({ showMateThreat: enabled }),
+      setShowTacticalThreat: (enabled) => set({ showTacticalThreat: enabled }),
+      setShowAttackingMoves: (enabled) => set({ showAttackingMoves: enabled }),
+      setShowStronglyDefended: (enabled) => set({ showStronglyDefended: enabled }),
+      setShowWeaklyDefended: (enabled) => set({ showWeaklyDefended: enabled }),
+      setShowPawnWeaknesses: (enabled) => set({ showPawnWeaknesses: enabled }),
+      setArrowColor: (color) => set({ arrowColor: color }),
+      setShowThreatArrows: (enabled) => set({ showThreatArrows: enabled }),
+      setMarkThreatenedSquares: (enabled) => set({ markThreatenedSquares: enabled }),
+      // Key Elements setters
+      setShowKeyElementsInPlay: (enabled) => set({ showKeyElementsInPlay: enabled }),
+      setShowKeyElementsInAnalysis: (enabled) => set({ showKeyElementsInAnalysis: enabled }),
+      setShowBackwardPawns: (enabled) => set({ showBackwardPawns: enabled }),
+      // Analysis Reports setters
+      setQuickReportMode: (mode) => set({ quickReportMode: mode }),
+      setQuickReportValue: (value) => set({ quickReportValue: value }),
+      setDeepReportMode: (mode) => set({ deepReportMode: mode }),
+      setDeepReportValue: (value) => set({ deepReportValue: value }),
+      setIntelligentAnalysis: (enabled) => set({ intelligentAnalysis: enabled }),
+      setShowCPL: (enabled) => set({ showCPL: enabled }),
+      // Visuals setters
+      setManualArrowsEnabled: (enabled) => set({ manualArrowsEnabled: enabled }),
+      setShowPreviousBestMove: (enabled) => set({ showPreviousBestMove: enabled }),
+      setColorLastMoveByStrength: (enabled) => set({ colorLastMoveByStrength: enabled }),
+      setVerticalMovesOnMobile: (enabled) => set({ verticalMovesOnMobile: enabled }),
+      setShowLegalDots: (enabled) => set({ showLegalDots: enabled }),
+      setAutoFlipBoard: (enabled) => set({ autoFlipBoard: enabled }),
+      setPieceStyle: (style) => set({ pieceStyle: style }),
+      // Audio setters
+      setMoveSoundEnabled: (enabled) => set({ moveSoundEnabled: enabled }),
+      setCheckAlarmEnabled: (enabled) => set({ checkAlarmEnabled: enabled }),
+      setUiSoundsEnabled: (enabled) => set({ uiSoundsEnabled: enabled }),
     }),
     {
       name: 'chessfish-engine-storage',
@@ -1022,6 +1237,53 @@ export const useEngineStore = create<EngineState>()(
         showIsolatedPawns: state.showIsolatedPawns,
         showPassedPawns: state.showPassedPawns,
         activeView: state.activeView,
+        // Board & General
+        boardTheme: state.boardTheme,
+        language: state.language,
+        username: state.username,
+        // Game Settings
+        zenMode: state.zenMode,
+        premoveEnabled: state.premoveEnabled,
+        showThreatsInPlay: state.showThreatsInPlay,
+        showEvalBar: state.showEvalBar,
+        pauseOnBlunder: state.pauseOnBlunder,
+        pauseOnMistake: state.pauseOnMistake,
+        showMoveStrength: state.showMoveStrength,
+        showOpponentMoveStrength: state.showOpponentMoveStrength,
+        // Threat Settings
+        showThreatsInAnalysis: state.showThreatsInAnalysis,
+        showMateThreat: state.showMateThreat,
+        showTacticalThreat: state.showTacticalThreat,
+        showAttackingMoves: state.showAttackingMoves,
+        showStronglyDefended: state.showStronglyDefended,
+        showWeaklyDefended: state.showWeaklyDefended,
+        showPawnWeaknesses: state.showPawnWeaknesses,
+        arrowColor: state.arrowColor,
+        showThreatArrows: state.showThreatArrows,
+        markThreatenedSquares: state.markThreatenedSquares,
+        // Key Elements
+        showKeyElementsInPlay: state.showKeyElementsInPlay,
+        showKeyElementsInAnalysis: state.showKeyElementsInAnalysis,
+        showBackwardPawns: state.showBackwardPawns,
+        // Analysis Reports
+        quickReportMode: state.quickReportMode,
+        quickReportValue: state.quickReportValue,
+        deepReportMode: state.deepReportMode,
+        deepReportValue: state.deepReportValue,
+        intelligentAnalysis: state.intelligentAnalysis,
+        showCPL: state.showCPL,
+        // Visuals
+        manualArrowsEnabled: state.manualArrowsEnabled,
+        showPreviousBestMove: state.showPreviousBestMove,
+        colorLastMoveByStrength: state.colorLastMoveByStrength,
+        verticalMovesOnMobile: state.verticalMovesOnMobile,
+        showLegalDots: state.showLegalDots,
+        autoFlipBoard: state.autoFlipBoard,
+        pieceStyle: state.pieceStyle,
+        // Audio
+        moveSoundEnabled: state.moveSoundEnabled,
+        checkAlarmEnabled: state.checkAlarmEnabled,
+        uiSoundsEnabled: state.uiSoundsEnabled,
       }),
     }
   )

@@ -127,7 +127,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               <Sword className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-black text-xl text-white leading-none uppercase tracking-tighter">Chess<span className="text-primary">Fish</span></h1>
+              <h1 className="font-black text-xl bg-gradient-to-r from-primary via-green-400 to-white bg-clip-text text-transparent leading-none uppercase tracking-tighter">Chess<span className="text-primary">Fish</span></h1>
               <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mt-1">v2.0 PRO</p>
             </div>
           </div>
@@ -175,18 +175,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 <Cpu size={14} className="text-zinc-700" />
               </div>
               
-              <div className="text-[10px] font-black text-zinc-600 mb-5 uppercase tracking-wider">
+              <div className="text-[10px] font-black text-zinc-600 uppercase tracking-wider">
                 {selectedEngine === 'cloud' ? `Cloud • ${engineLabel}` : `Local • ${engineLabel}`}
               </div>
-
-              <Button 
-                variant={status === 'ready' ? "outline" : "default"}
-                size="sm"
-                onClick={() => engineStore.status === 'ready' ? engineStore.shutdownEngine() : engineStore.bootEngine()}
-                className="w-full h-10 rounded-xl font-black text-[10px] tactile-btn"
-              >
-                {status === 'ready' ? 'Restart' : 'Boot'}
-              </Button>
             </div>
           </div>
         </div>
@@ -290,18 +281,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   "p-4 chunky-card",
                   status === 'ready' ? "bg-zinc-900" : "bg-zinc-950 border-white/5"
                 )}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={cn("w-2 h-2 rounded-full", status === 'ready' ? "bg-green-500 animate-pulse" : "bg-zinc-700")} />
-                    <span className="text-[10px] font-black text-zinc-500 uppercase">{status === 'ready' ? 'Engine Online' : 'Engine Offline'}</span>
+                  <div className="text-[10px] font-black text-zinc-500 uppercase">
+                    {selectedEngine === 'cloud' ? `Cloud • ${engineLabel}` : `Local • ${engineLabel}`}
                   </div>
-                  <Button 
-                    variant={status === 'ready' ? "outline" : "default"}
-                    size="sm"
-                    onClick={() => engineStore.status === 'ready' ? engineStore.shutdownEngine() : engineStore.bootEngine()}
-                    className="w-full h-10 rounded-xl font-black text-[10px] tactile-btn"
-                  >
-                    {status === 'ready' ? 'Restart' : 'Boot Engine'}
-                  </Button>
                 </div>
               </div>
 
@@ -344,18 +326,17 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Analyze</span>
           </button>
           
-          {/* Engine Status - Center */}
-          <button
-            onClick={() => engineStore.status === 'ready' ? engineStore.shutdownEngine() : engineStore.bootEngine()}
+          {/* Engine Status - Center (visual only) */}
+          <div
             className={cn(
-              "flex flex-col items-center justify-center p-3 rounded-2xl transition-all touch-manipulation -mt-4 border-2 shadow-lg",
+              "flex flex-col items-center justify-center p-3 rounded-2xl -mt-4 border-2 shadow-lg pointer-events-none",
               status === 'ready' 
                 ? "bg-green-500/20 border-green-500/50 text-green-400" 
                 : "bg-zinc-800 border-zinc-700 text-zinc-500"
             )}
           >
             <CircleDot size={24} className={cn(status === 'ready' && "animate-pulse")} />
-          </button>
+          </div>
           
           <button
             onClick={onOpenImport}

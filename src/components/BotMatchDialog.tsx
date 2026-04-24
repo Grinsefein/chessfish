@@ -75,7 +75,7 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
           </div>
         </DialogHeader>
 
-        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-5 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(85vh - 140px)' }}>
           
           {/* Bot Selection */}
           <div className="space-y-3">
@@ -121,7 +121,7 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
           </div>
 
           {/* Time Control */}
-          <div className="space-y-3 lg:space-y-4 pt-2 border-t-2 border-2 border-zinc-800">
+          <div className="space-y-3 lg:space-y-4 pt-4 border-t border-zinc-800/50">
             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
               <Clock size={14} />
               Time Control
@@ -172,13 +172,16 @@ export const BotMatchDialog: React.FC<BotMatchDialogProps> = ({
             </div>
           </div>
 
-          {/* Start Button */}
+        </div>
+
+        {/* Start Button - Fixed at bottom */}
+        <div className="p-4 lg:p-6 pt-0 lg:pt-0 border-t border-zinc-800 bg-zinc-950">
           <Button 
             onClick={handleStartGame}
-            className="w-full h-12 text-sm font-bold rounded-xl bg-primary hover:bg-primary/90 text-white"
+            className="w-full h-11 text-sm font-bold rounded-xl bg-primary hover:bg-primary/90 text-white"
           >
             <Swords className="w-4 h-4 mr-2" />
-            Start Game
+            Start Game vs {selectedBot.name}
           </Button>
         </div>
       </DialogContent>
