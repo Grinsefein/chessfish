@@ -12,7 +12,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --color-primary: hsla(94, 50%, 55%, 1);
+    --color-primary: hsla(100, 27%, 46%, 1);
     --color-primary-foreground: hsla(0, 0%, 100%, 1);
 }
 
@@ -23,7 +23,7 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 6%;
     --popover-foreground: 0 0% 98%;
-    --primary: 94 50% 55%;
+    --primary: 100 27% 46%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
@@ -85,16 +85,16 @@ html, body, #root {
   }
 
   /* Duolingo/Chess.com style chunky elements */
-  .chunky-button {
-    @apply transition-all active:translate-y-[2px] active:shadow-none;
+  .chunky-button, .tactile-btn {
+    @apply border-b-4 active:border-b-0 active:translate-y-1 transition-all;
   }
 
   .chunky-card {
-    @apply bg-zinc-900 border-2 border-zinc-800 rounded-2xl shadow-[0_4px_0_0_#27272a];
+    @apply bg-zinc-900 border border-white/5 rounded-3xl shadow-xl shadow-black/50;
   }
 
   .chunky-border {
-    @apply border-2 border-zinc-800;
+    @apply border border-white/5;
   }
 }
 

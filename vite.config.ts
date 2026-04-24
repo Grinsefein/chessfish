@@ -30,6 +30,7 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
+      allowedHosts: ['chessfish.file-share.ddns.net'],
       headers: {
         'Cross-Origin-Embedder-Policy': 'require-corp',
         'Cross-Origin-Opener-Policy': 'same-origin',

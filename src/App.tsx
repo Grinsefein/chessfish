@@ -304,8 +304,12 @@ function ChessApp() {
       allowDragging: previewIndex === null && (activeView === 'analyze' || turn === 'w'),
       squareStyles: styles,
       customArrows: arrows,
-      darkSquareStyle: { backgroundColor: 'hsla(94, 29%, 40%, 1)' },
-      lightSquareStyle: { backgroundColor: 'hsla(60, 30%, 90%, 1)' },
+      darkSquareStyle: { backgroundColor: 'hsla(94, 25%, 35%, 1)' },
+      lightSquareStyle: { backgroundColor: 'hsla(60, 25%, 92%, 1)' },
+      dropOffBoard: 'snapback' as const,
+      roughSquare: ({ squareElement }: { squareElement: HTMLElement }) => {
+        squareElement.style.transition = 'all 0.15s ease-out';
+      },
       onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string, targetSquare: string }) => {
         if (previewIndex !== null) return false;
         setSelectedSquare(null);
@@ -408,9 +412,9 @@ function ChessApp() {
           ]}
         />
         
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar pb-16 lg:pb-0">
-          {/* Header */}
-          <header className="w-full h-14 px-4 lg:px-8 flex items-center justify-between border-b-2 border-zinc-900 bg-zinc-950 shrink-0">
+        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar pb-16 lg:pb-0 lg:pt-0 md:pt-14">
+          {/* Header - Hidden on tablet (handled by LeftSidebar) */}
+          <header className="hidden md:hidden lg:flex w-full h-14 px-4 lg:px-8 items-center justify-between border-b-2 border-zinc-900 bg-zinc-950 shrink-0">
             <div className="flex items-center gap-2 lg:gap-4">
               <div className="hidden sm:flex bg-zinc-900 p-1 rounded-lg border-2 border-zinc-800">
                 <button className="flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-white transition-all">
@@ -455,48 +459,90 @@ function ChessApp() {
           </header>
 
           <main className="flex-1 flex flex-col xl:flex-row gap-4 lg:gap-8 p-4 lg:p-6 items-center xl:items-start justify-center">
-            {/* Eval Bar */}
-            <div className="hidden lg:flex flex-col items-center gap-2 py-2 h-[480px] self-center">
-              <div className="w-6 h-full bg-zinc-900 rounded-lg border-2 border-zinc-800 overflow-hidden flex flex-col-reverse relative">
-                <motion.div 
-                  className="bg-white w-full transition-all duration-700 ease-out z-0 relative"
-                  animate={{ height: `${evalPercentage}%` }}
-                />
-                <div className="absolute top-1/2 left-0 w-full h-[1px] bg-zinc-700 z-10" />
-                <div className={cn("absolute left-0 w-full text-center font-bold text-[9px] z-20 mix-blend-difference", currentEvaluation >= 0 ? 'top-2' : 'bottom-2')}>
-                  {engineLines[0]?.isMate ? (currentEvaluation > 0 ? `M${Math.abs(currentEvaluation)}` : `-M${Math.abs(currentEvaluation)}`) : (currentEvaluation > 0 ? `+${currentEvaluation.toFixed(1)}` : currentEvaluation.toFixed(1))}
-                </div>
-              </div>
-            </div>
-
-            {/* Board Area */}
-            <div className="flex-1 max-w-[600px] w-full flex flex-col gap-4">
-              <div className="w-full aspect-square relative rounded-xl overflow-hidden border-[8px] lg:border-[10px] border-zinc-900 shadow-[0_4px_0_0_#09090b]">
-                <ChessboardErrorBoundary>
-                  {/* @ts-ignore - This custom Chessboard build expects options prop */}
-                  <Chessboard options={boardOptions} />
-                </ChessboardErrorBoundary>
-
-              {/* Classification Badges */}
-              {lastMove && activeView === 'analyze' && gameStore.classifications[previewIndex ?? (history.length - 1)] && (
-                <div
-                  className="absolute z-50 pointer-events-none"
-                  style={{
-                    left: turn === 'w'
-                      ? `${(lastMove.to.charCodeAt(0) - 97) * 12.5}%`
-                      : `${(104 - lastMove.to.charCodeAt(0)) * 12.5}%`,
-                    top: turn === 'w'
-                      ? `${(8 - parseInt(lastMove.to[1])) * 12.5}%`
-                      : `${(parseInt(lastMove.to[1]) - 1) * 12.5}%`,
-                    width: '12.5%',
-                    height: '12.5%'
-                  }}
-                >
-                  <ClassificationBadge
-                    classification={gameStore.classifications[previewIndex ?? (history.length - 1)]}
+            {/* Game Area - Board and Eval Bar */}
+            <div className="flex-1 max-w-[640px] w-full flex flex-col gap-3 lg:gap-4 self-center xl:self-start">
+              <div className="flex w-full items-stretch">
+                {/* Eval Bar - attached seamlessly to the board */}
+                <div className="hidden lg:flex w-5 lg:w-6 bg-zinc-900 rounded-l-2xl border-y-[12px] border-l-[12px] border-zinc-900 overflow-hidden flex-col-reverse relative shrink-0">
+                  {/* White advantage area (top) */}
+                  <motion.div 
+                    className="absolute top-0 left-0 right-0 bg-gradient-to-b from-white via-zinc-100 to-zinc-300 z-10"
+                    initial={false}
+                    animate={{ 
+                      height: `${Math.max(0, Math.min(100, evalPercentage))}%`,
+                    }}
+                    transition={{ 
+                      type: "spring",
+                      stiffness: 60,
+                      damping: 15,
+                      mass: 1
+                    }}
                   />
+                  {/* Black advantage area (bottom) */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-900 to-zinc-800 z-0 h-full" />
+                  
+                  {/* Center line */}
+                  <div className="absolute top-1/2 left-0 w-full h-[2px] bg-zinc-600 z-20 shadow-sm" />
+                  
+                  {/* Evaluation text */}
+                  <motion.div 
+                    className="absolute left-0 w-full text-center font-black text-[8px] z-30 px-0.5"
+                    animate={{ 
+                      top: `${100 - evalPercentage}%`,
+                      y: '-50%'
+                    }}
+                    transition={{ 
+                      type: "spring",
+                      stiffness: 60,
+                      damping: 15 
+                    }}
+                  >
+                    <span className={cn(
+                      "inline-block px-0.5 py-0.5 rounded-sm backdrop-blur-sm font-mono text-[9px] leading-none shadow-sm",
+                      Math.abs(currentEvaluation) > 3 
+                        ? (currentEvaluation > 0 ? "bg-white/95 text-black" : "bg-black/95 text-white") 
+                        : "bg-zinc-800/95 text-zinc-200"
+                    )}>
+                      {engineLines[0]?.isMate 
+                        ? (currentEvaluation > 0 ? `M${Math.abs(currentEvaluation)}` : `-M${Math.abs(currentEvaluation)}`) 
+                        : (currentEvaluation > 0 ? `+${currentEvaluation.toFixed(1)}` : currentEvaluation.toFixed(1))}
+                    </span>
+                  </motion.div>
                 </div>
-              )}
+
+                {/* Board Area */}
+                <div className="flex-1 relative">
+                  {/* Board glow effect */}
+                  <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 via-transparent to-primary/10 rounded-2xl lg:rounded-l-none blur-sm opacity-50" />
+                  
+                  <div className="w-full aspect-square relative rounded-2xl lg:rounded-l-none overflow-hidden border-[10px] lg:border-y-[12px] lg:border-r-[12px] lg:border-l-0 border-zinc-900 shadow-[0_8px_32px_rgba(0,0,0,0.4),0_4px_0_0_#09090b,0_0_0_1px_rgba(255,255,255,0.05)]">
+                  <ChessboardErrorBoundary>
+                    {/* @ts-ignore - This custom Chessboard build expects options prop */}
+                    <Chessboard options={boardOptions} />
+                  </ChessboardErrorBoundary>
+
+                {/* Classification Badges */}
+                {lastMove && activeView === 'analyze' && gameStore.classifications[previewIndex ?? (history.length - 1)] && (
+                  <div
+                    className="absolute z-50 pointer-events-none"
+                    style={{
+                      left: turn === 'w'
+                        ? `${(lastMove.to.charCodeAt(0) - 97) * 12.5}%`
+                        : `${(104 - lastMove.to.charCodeAt(0)) * 12.5}%`,
+                      top: turn === 'w'
+                        ? `${(8 - parseInt(lastMove.to[1])) * 12.5}%`
+                        : `${(parseInt(lastMove.to[1]) - 1) * 12.5}%`,
+                      width: '12.5%',
+                      height: '12.5%'
+                    }}
+                  >
+                    <ClassificationBadge
+                      classification={gameStore.classifications[previewIndex ?? (history.length - 1)]}
+                    />
+                  </div>
+                )}
+                </div>
+                </div>
               </div>
               <EngineAnalysisBar
                 onPrevMove={() => {
