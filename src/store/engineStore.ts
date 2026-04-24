@@ -51,6 +51,9 @@ interface EngineState {
   worker: Worker | null;
   socket: any | null;
   
+  // Command logs
+  commandLogs: string[];
+  
   // Analysis results
   isAnalyzing: boolean;
   currentEvaluation: number;
@@ -106,6 +109,8 @@ interface EngineState {
   setStatus: (status: EngineStatus, message?: string) => void;
   setWorker: (worker: Worker | null) => void;
   setSocket: (socket: any | null) => void;
+  addLog: (message: string) => void;
+  clearLogs: () => void;
   
   // Engine Lifecycle
   bootEngine: () => Promise<void>;
@@ -162,6 +167,7 @@ export const useEngineStore = create<EngineState>()(
       
       worker: null,
       socket: null,
+      commandLogs: [],
       
       isAnalyzing: false,
       currentEvaluation: 0,
@@ -229,6 +235,14 @@ export const useEngineStore = create<EngineState>()(
       
       // Set socket
       setSocket: (socket) => set({ socket }),
+      
+      // Add log message
+      addLog: (message) => set((state) => ({
+        commandLogs: [...state.commandLogs, `[${new Date().toLocaleTimeString()}] ${message}`]
+      })),
+      
+      // Clear logs
+      clearLogs: () => set({ commandLogs: [] }),
       
       // Start analysis
       startAnalysis: () => set({ isAnalyzing: true }),

@@ -128,8 +128,21 @@ export function useStockfish() {
           
           if (typeof msg !== 'string') return;
 
-          if (msg.includes('Stockfish')) {
+          // UCI protocol: wait for uciok, then send options, then wait for readyok
+          if (msg.includes('uciok')) {
+            // UCI handshake complete, send configuration options
+            worker.postMessage(`setoption name MultiPV value ${multiPV}`);
+            worker.postMessage(`setoption name Use NNUE value ${nnueEnabled}`);
+            if (currentNNUE) {
+              worker.postMessage(`setoption name EvalFile value ${currentNNUE.name}`);
+            }
+            worker.postMessage('isready');
+          } else if (msg.includes('readyok')) {
+            // Engine is ready for commands
             setIsReady(true);
+          } else if (msg.includes('Stockfish') && !msg.includes('uciok')) {
+            // Some engines send name before uciok, don't mark ready yet
+            console.log('Engine name received:', msg);
           }
 
           // Parse Multi-PV
@@ -190,13 +203,8 @@ export function useStockfish() {
           }
         };
 
+        // Initialize UCI - options will be sent after uciok response
         worker.postMessage('uci');
-        worker.postMessage('isready');
-        worker.postMessage(`setoption name MultiPV value ${multiPV}`);
-        worker.postMessage(`setoption name Use NNUE value ${nnueEnabled}`);
-        if (currentNNUE) {
-          worker.postMessage(`setoption name EvalFile value ${currentNNUE.name}`);
-        }
 
       } catch (err) {
         console.error('Failed to initialize Stockfish:', err);
