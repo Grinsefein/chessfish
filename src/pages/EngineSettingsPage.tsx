@@ -120,12 +120,12 @@ export default function EngineSettingsPage() {
           </div>
 
           {/* Sidebar Navigation - Desktop */}
-          <div className="hidden lg:flex w-96 border-r-2 border-zinc-800 bg-zinc-950 flex-col shrink-0">
+          <div className="hidden lg:flex w-80 border-r-2 border-zinc-800 bg-zinc-950 flex-col shrink-0">
             {/* Header Section */}
-            <div className="p-6 border-b-2 border-zinc-800">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
-                  <Settings2 className="w-5 h-5 text-primary" />
+            <div className="p-5 border-b-2 border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <Settings2 className="w-4 h-4 text-primary" />
                 </div>
                 <div>
                   <h2 className="text-sm font-black text-white uppercase tracking-wider">Engine Settings</h2>
@@ -135,8 +135,8 @@ export default function EngineSettingsPage() {
             </div>
 
             {/* Navigation Items */}
-            <div className="flex-1 p-5 overflow-y-auto">
-              <TabsList className="flex flex-col h-auto bg-transparent gap-3 w-full border-0 shadow-none p-0">
+            <div className="flex-1 p-4 overflow-y-auto">
+              <TabsList className="flex flex-col h-auto bg-transparent gap-2 w-full border-0 shadow-none p-0">
                 {[
                   {
                     value: 'config',
@@ -155,18 +155,18 @@ export default function EngineSettingsPage() {
                     key={tab.value}
                     value={tab.value}
                     className={cn(
-                      "w-full justify-start gap-3 px-4 py-4 h-auto rounded-xl text-left transition-all duration-200",
-                      "border-2 border-transparent data-[state=active]:border-primary",
-                      "data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-[0_4px_0_0_#4a6728]",
-                      "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900",
+                      "w-full justify-start gap-3 px-3 py-3 h-auto rounded-lg text-left transition-all duration-200",
+                      "border border-transparent data-[state=active]:border-primary/50",
+                      "data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-[0_3px_0_0_#4a6728]",
+                      "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50",
                       "data-[state=active]:hover:bg-primary data-[state=active]:hover:text-white"
                     )}
                   >
                     <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                      "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors",
                       "bg-zinc-900 data-[state=active]:bg-white/20"
                     )}>
-                      <tab.icon size={20} className="shrink-0" />
+                      <tab.icon size={18} className="shrink-0" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-black uppercase tracking-wide">{tab.label}</div>
@@ -180,11 +180,11 @@ export default function EngineSettingsPage() {
             </div>
 
             {/* Status Footer */}
-            <div className="p-5 border-t-2 border-zinc-800">
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+            <div className="p-4 border-t-2 border-zinc-800">
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
                 <div className={cn(
-                  "w-2.5 h-2.5 rounded-full shrink-0",
-                  status === 'ready' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
+                  "w-2 h-2 rounded-full shrink-0",
+                  status === 'ready' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]' :
                   status === 'booting' ? 'bg-amber-500 animate-pulse' :
                   status === 'error' ? 'bg-red-500' : 'bg-zinc-600'
                 )} />
@@ -201,94 +201,102 @@ export default function EngineSettingsPage() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12 xl:p-16 custom-scrollbar space-y-6 sm:space-y-8 lg:space-y-12 bg-zinc-900">
+          <div className="flex-1 overflow-y-auto p-6 lg:p-10 xl:p-14 custom-scrollbar space-y-8 lg:space-y-10 bg-zinc-900">
             
             {/* Configuration Tab */}
-            <TabsContent value="config" className="m-0 space-y-6 sm:space-y-8 lg:space-y-12">
-              <div className="space-y-2 sm:space-y-4">
-                <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Engine Version</Label>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-4">
+            <TabsContent value="config" className="m-0 space-y-8 lg:space-y-10">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-zinc-800" />
+                  <Label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.15em]">Engine Version</Label>
+                  <div className="h-px flex-1 bg-zinc-800" />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {ENGINE_VERSIONS.map((version) => (
                     <button
                       key={version.id}
                       onClick={() => setEngineVersion(version.id)}
                       className={cn(
-                        "p-3 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b]",
+                        "group p-4 lg:p-6 rounded-xl border transition-all text-left",
                         effectiveVersion === version.id
-                          ? 'border-primary bg-primary/10 translate-y-[-1px] sm:translate-y-[-2px]'
-                          : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
+                          ? 'border-primary/50 bg-primary/5'
+                          : 'border-zinc-700/50 bg-zinc-800/30 hover:border-zinc-600/50 hover:bg-zinc-800/50'
                       )}
                     >
-                      <div className="text-base sm:text-lg font-black text-white uppercase tracking-tight">{version.label}</div>
-                      <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">{version.description}</div>
+                      <div className={cn("text-base font-black uppercase tracking-tight transition-colors", effectiveVersion === version.id ? 'text-primary' : 'text-white group-hover:text-zinc-200')}>{version.label}</div>
+                      <div className="text-[11px] text-zinc-500 font-medium mt-1">{version.description}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-10">
-                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                <div className="p-5 lg:p-8 rounded-xl bg-zinc-800/50 border border-zinc-700/50 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Threads</Label>
-                    <span className="text-base font-black text-primary bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">{threads}</span>
+                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-wider">Threads</Label>
+                    <span className="text-sm font-black text-primary bg-primary/10 px-3 py-1 rounded-md border border-primary/20">{threads}</span>
                   </div>
                   <Slider value={[threads]} onValueChange={(v) => setEngineSettings({ threads: v[0] })} min={1} max={8} step={1} />
-                  <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">CPU threads for engine calculation</div>
+                  <div className="text-[11px] text-zinc-500 font-medium">CPU threads for engine calculation</div>
                 </div>
-                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
+                <div className="p-5 lg:p-8 rounded-xl bg-zinc-800/50 border border-zinc-700/50 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Hash Memory</Label>
-                    <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{hashSize}MB</span>
+                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-wider">Hash Memory</Label>
+                    <span className="text-sm font-black text-primary bg-primary/10 px-3 py-1 rounded-md border border-primary/20">{hashSize}MB</span>
                   </div>
                   <Slider value={[hashSize]} onValueChange={(v) => setEngineSettings({ hashSize: v[0] })} min={16} max={1024} step={16} />
-                  <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Transposition table size</div>
+                  <div className="text-[11px] text-zinc-500 font-medium">Transposition table size</div>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 flex items-center justify-between shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b]">
+              <div className="p-5 lg:p-6 rounded-xl bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-between">
                 <div>
-                  <div className="text-sm sm:text-base font-black text-white uppercase tracking-tight">Energy Saving Mode</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-0.5 sm:mt-1">Reduce CPU usage when idle</div>
+                  <div className="text-sm font-black text-white uppercase tracking-wide">Energy Saving Mode</div>
+                  <div className="text-[11px] text-zinc-500 font-medium mt-0.5">Reduce CPU usage when idle</div>
                 </div>
                 <Switch checked={energySavingMode} onCheckedChange={setEnergySavingMode} />
               </div>
 
-              <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
+              <div className="p-5 lg:p-8 rounded-xl bg-zinc-800/50 border border-zinc-700/50 space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Multi-PV Lines</Label>
-                  <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{engineStore.multiPv}</span>
+                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-wider">Multi-PV Lines</Label>
+                  <span className="text-sm font-black text-primary bg-primary/10 px-3 py-1 rounded-md border border-primary/20">{engineStore.multiPv}</span>
                 </div>
                 <Slider value={[engineStore.multiPv]} onValueChange={(v) => setEngineSettings({ multiPv: v[0] })} min={1} max={5} step={1} />
-                <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Number of principal variations to calculate</div>
+                <div className="text-[11px] text-zinc-500 font-medium">Number of principal variations to calculate</div>
               </div>
 
-              <div className="space-y-3 sm:space-y-4">
-                <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Analysis Mode</Label>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-                  <button onClick={() => setAnalysisMode('depth')} className={cn("p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] min-h-[80px] sm:min-h-[120px]", analysisMode === 'depth' ? 'border-primary bg-primary/10 translate-y-[-1px] sm:translate-y-[-2px]' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600')}>
-                    <div className="text-base sm:text-xl font-black text-white uppercase tracking-tight">Depth</div>
-                    <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1 sm:mt-2">Fixed search depth</div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-zinc-800" />
+                  <Label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.15em]">Analysis Mode</Label>
+                  <div className="h-px flex-1 bg-zinc-800" />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <button onClick={() => setAnalysisMode('depth')} className={cn("group p-5 lg:p-8 rounded-xl border transition-all text-left min-h-[100px] lg:min-h-[120px]", analysisMode === 'depth' ? 'border-primary/50 bg-primary/5' : 'border-zinc-700/50 bg-zinc-800/30 hover:border-zinc-600/50 hover:bg-zinc-800/50')}>
+                    <div className={cn("text-lg font-black uppercase tracking-tight transition-colors", analysisMode === 'depth' ? 'text-primary' : 'text-white group-hover:text-zinc-200')}>Depth</div>
+                    <div className="text-[11px] text-zinc-500 font-medium mt-1.5">Fixed search depth</div>
                   </button>
-                  <button onClick={() => setAnalysisMode('time')} className={cn("p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl border-2 transition-all text-left shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] min-h-[80px] sm:min-h-[120px]", analysisMode === 'time' ? 'border-primary bg-primary/10 translate-y-[-1px] sm:translate-y-[-2px]' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600')}>
-                    <div className="text-base sm:text-xl font-black text-white uppercase tracking-tight">Time</div>
-                    <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1 sm:mt-2">Fixed time limit</div>
+                  <button onClick={() => setAnalysisMode('time')} className={cn("group p-5 lg:p-8 rounded-xl border transition-all text-left min-h-[100px] lg:min-h-[120px]", analysisMode === 'time' ? 'border-primary/50 bg-primary/5' : 'border-zinc-700/50 bg-zinc-800/30 hover:border-zinc-600/50 hover:bg-zinc-800/50')}>
+                    <div className={cn("text-lg font-black uppercase tracking-tight transition-colors", analysisMode === 'time' ? 'text-primary' : 'text-white group-hover:text-zinc-200')}>Time</div>
+                    <div className="text-[11px] text-zinc-500 font-medium mt-1.5">Fixed time limit</div>
                   </button>
                 </div>
               </div>
 
               {analysisMode === 'depth' ? (
-                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
+                <div className="p-5 lg:p-8 rounded-xl bg-zinc-800/50 border border-zinc-700/50 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Max Search Depth</Label>
-                    <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{maxDepth}</span>
+                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-wider">Max Search Depth</Label>
+                    <span className="text-sm font-black text-primary bg-primary/10 px-3 py-1 rounded-md border border-primary/20">{maxDepth}</span>
                   </div>
                   <Slider value={[maxDepth]} onValueChange={(v) => setMaxDepth(v[0])} min={10} max={30} step={1} />
                 </div>
               ) : (
-                <div className="p-4 sm:p-6 lg:p-10 rounded-xl sm:rounded-2xl bg-zinc-800 border-2 border-zinc-700 shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b] space-y-4 sm:space-y-6">
+                <div className="p-5 lg:p-8 rounded-xl bg-zinc-800/50 border border-zinc-700/50 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Max Time per Move (s)</Label>
-                    <span className="text-sm sm:text-base font-black text-primary bg-primary/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">{maxTimePerMove}s</span>
+                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-wider">Max Time per Move</Label>
+                    <span className="text-sm font-black text-primary bg-primary/10 px-3 py-1 rounded-md border border-primary/20">{maxTimePerMove}s</span>
                   </div>
                   <Slider value={[maxTimePerMove]} onValueChange={(v) => setMaxTimePerMove(v[0])} min={1} max={30} step={1} />
                 </div>
@@ -296,92 +304,106 @@ export default function EngineSettingsPage() {
             </TabsContent>
 
             {/* Backend Tab */}
-            <TabsContent value="backend" className="m-0 space-y-6 sm:space-y-8 lg:space-y-12">
+            <TabsContent value="backend" className="m-0 space-y-8 lg:space-y-10">
               <div className={cn(
-                "p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between relative overflow-hidden gap-2 sm:gap-4",
-                status === 'ready' ? 'bg-green-500/10 border-green-500/50' :
-                status === 'booting' ? 'bg-amber-500/10 border-amber-500/50' :
-                status === 'error' ? 'bg-red-500/10 border-red-500/50' : 'bg-zinc-800 border-zinc-700'
+                "p-5 lg:p-6 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4",
+                status === 'ready' ? 'bg-green-500/5 border-green-500/30' :
+                status === 'booting' ? 'bg-amber-500/5 border-amber-500/30' :
+                status === 'error' ? 'bg-red-500/5 border-red-500/30' : 'bg-zinc-800/50 border-zinc-700/50'
               )}>
-                <div className="flex items-center gap-4 relative z-10">
+                <div className="flex items-center gap-3">
                   <div className={cn(
-                    "w-5 h-5 rounded-full shrink-0",
-                    status === 'ready' ? 'bg-green-500' : status === 'booting' ? 'bg-amber-500 animate-pulse' : status === 'error' ? 'bg-red-500' : 'bg-zinc-500'
+                    "w-3 h-3 rounded-full shrink-0",
+                    status === 'ready' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : status === 'booting' ? 'bg-amber-500 animate-pulse' : status === 'error' ? 'bg-red-500' : 'bg-zinc-600'
                   )} />
                   <div>
-                    <div className="text-lg lg:text-xl font-black text-white uppercase tracking-tight">
-                      {status === 'ready' ? 'Engine Active' : status === 'booting' ? 'Booting...' : status === 'error' ? 'Fault' : 'Offline'}
+                    <div className="text-base font-black text-white uppercase tracking-wide">
+                      {status === 'ready' ? 'Engine Active' : status === 'booting' ? 'Booting...' : status === 'error' ? 'Connection Error' : 'Offline'}
                     </div>
-                    <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">{effectiveStatusMessage}</div>
+                    <div className="text-[11px] text-zinc-500 font-medium mt-0.5">{effectiveStatusMessage}</div>
                   </div>
                 </div>
                 
                 {status === 'offline' || status === 'error' ? (
-                  <Button onClick={() => engineStore.bootEngine()} size="sm" className="bg-green-600 hover:bg-green-500 text-white font-black px-6 lg:px-8 rounded-xl border-green-700 shadow-[0_4px_0_0_#14532d] w-full sm:w-auto">
-                    <Play className="w-4 h-4 mr-2" /> BOOT
+                  <Button onClick={() => engineStore.bootEngine()} size="sm" className="bg-green-600 hover:bg-green-500 text-white font-black px-5 rounded-lg border-0 h-9">
+                    <Play className="w-4 h-4 mr-2" /> Start Engine
                   </Button>
                 ) : (
-                  <Button onClick={() => engineStore.shutdownEngine()} size="sm" variant="outline" className="border-red-500 text-red-500 hover:bg-red-500/10 font-black px-6 lg:px-8 rounded-xl shadow-[0_4px_0_0_#450a0a] w-full sm:w-auto">
-                    <Square className="w-4 h-4 mr-2" /> STOP
+                  <Button onClick={() => engineStore.shutdownEngine()} size="sm" variant="outline" className="border-zinc-600 text-zinc-400 hover:text-white hover:bg-zinc-800 font-black px-5 rounded-lg h-9">
+                    <Square className="w-4 h-4 mr-2" /> Stop
                   </Button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-                <div className="p-3 sm:p-5 rounded-xl bg-zinc-800 border-2 border-zinc-700">
-                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Effective Runtime</div>
-                  <div className="text-lg font-black text-white uppercase tracking-tight mt-2">
-                    {`${cloudRuntime.engine} / ${cloudRuntime.engineVersion}`}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
+                <div className="p-4 lg:p-5 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Runtime</div>
+                  <div className="text-base font-black text-white uppercase tracking-tight mt-1.5">
+                    {cloudRuntime.engine} <span className="text-zinc-500">/</span> {cloudRuntime.engineVersion}
                   </div>
                 </div>
-                <div className="p-3 sm:p-5 rounded-xl bg-zinc-800 border-2 border-zinc-700">
-                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Snapshot</div>
-                  <div className="text-lg font-black text-white uppercase tracking-tight mt-2">
-                    {isRefreshingSnapshot ? 'Checking...' : lastHydratedAt ? 'Synced' : 'Pending'}
+                <div className="p-4 lg:p-5 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Status</div>
+                  <div className="text-base font-black text-white uppercase tracking-tight mt-1.5">
+                    {isRefreshingSnapshot ? 'Syncing...' : lastHydratedAt ? 'Connected' : 'Pending'}
                   </div>
                 </div>
-                <div className="p-3 sm:p-5 rounded-xl bg-zinc-800 border-2 border-zinc-700">
-                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Engine Path</div>
-                  <div className="text-sm font-black text-white tracking-tight mt-2 break-all">
+                <div className="p-4 lg:p-5 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Binary Path</div>
+                  <div className="text-xs font-mono text-zinc-400 mt-1.5 truncate">
                     {cloudRuntime.path}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 sm:space-y-4">
-                <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Runtime</Label>
-                <div className="p-3 sm:p-6 rounded-xl sm:rounded-2xl border-2 bg-zinc-800 border-primary shadow-[0_2px_0_0_#4a6728] sm:shadow-[0_4px_0_0_#4a6728]">
-                  <div className="font-black text-white text-sm sm:text-base uppercase tracking-tight">Stockfish Cloud</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">
-                    Server-side engine only. Local browser engines are hidden for now.
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-zinc-800" />
+                  <Label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.15em]">Active Runtime</Label>
+                  <div className="h-px flex-1 bg-zinc-800" />
+                </div>
+                <div className="p-5 lg:p-6 rounded-xl bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Cpu className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-black text-white text-sm uppercase tracking-wide">Stockfish Cloud</div>
+                      <div className="text-[11px] text-zinc-500 font-medium mt-0.5">
+                        Server-side engine with shared runtime
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Command Output Log */}
-              <div className="space-y-2 sm:space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Engine Output</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="h-px w-8 bg-zinc-800" />
+                    <Label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.15em]">Engine Logs</Label>
+                  </div>
                   {commandLogs.length > 0 && (
                     <button
                       onClick={() => void clearLogs()}
-                      className="text-xs text-zinc-500 hover:text-white font-black uppercase tracking-widest transition-colors"
+                      className="text-[11px] text-zinc-500 hover:text-zinc-300 font-medium transition-colors"
                     >
                       Clear
                     </button>
                   )}
                 </div>
-                <div className="bg-zinc-950 border-2 border-zinc-800 rounded-lg sm:rounded-xl overflow-hidden shadow-[0_2px_0_0_#09090b] sm:shadow-[0_4px_0_0_#09090b]">
-                  <div className="p-3 sm:p-6 h-48 sm:h-64 overflow-y-auto custom-scrollbar">
+                <div className="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
+                  <div className="p-4 h-56 overflow-y-auto custom-scrollbar font-mono text-xs">
                     {commandLogs.length === 0 ? (
-                      <div className="text-zinc-600 text-sm font-mono">
-                        {selectedEngine === 'cloud' ? 'No logs yet.' : 'No local output yet. Boot the engine to see command logs.'}
+                      <div className="text-zinc-600 italic">
+                        {selectedEngine === 'cloud' ? 'No engine output yet.' : 'Boot the engine to see command logs.'}
                       </div>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         {commandLogs.map((log, index) => (
-                          <div key={index} className="text-sm font-mono text-zinc-400 break-all">
-                            {log}
+                          <div key={index} className="text-zinc-400 break-all hover:text-zinc-300 transition-colors">
+                            <span className="text-zinc-600 mr-2">{index + 1}</span>{log}
                           </div>
                         ))}
                       </div>
